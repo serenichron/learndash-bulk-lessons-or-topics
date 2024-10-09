@@ -1,0 +1,5 @@
+post_type,post_title,post_content,course_id,lesson_id,custom_field_1,custom_field_2
+sfwd-lessons,"Example Lesson 1","This is the content of Example Lesson 1",123,,custom_value_1,custom_value_2
+sfwd-lessons,"Example Lesson 2","This is the content of Example Lesson 2",123,,custom_value_3,custom_value_4
+sfwd-topic,"Example Topic 1","This is the content of Example Topic 1",123,456,custom_value_5,custom_value_6
+sfwd-topic,"Example Topic 2","This is the content of Example Topic 2",123,456,custom_value_7,custom_value_8
