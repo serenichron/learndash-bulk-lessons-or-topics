@@ -33,18 +33,16 @@ This plugin is designed to be installed using Composer. To install, follow these
      "repositories": [
        {
          "type": "vcs",
-         "url": "https://github.com/your-username/learndash-bulk-create"
+         "url": "https://github.com/serenichron/learndash-bulk-create"
        }
      ]
    }
    ```
 
-   Replace `your-username` with your actual GitHub username or organization name.
-
 3. Require the plugin in your project:
 
    ```
-   composer require your-username/learndash-bulk-create
+   composer require serenichron/learndash-bulk-create
    ```
 
 4. If you're using a custom installer location for WordPress plugins, make sure it's configured correctly in your `composer.json`:
@@ -88,7 +86,7 @@ You can download a template CSV file from the Bulk Create page in the admin pane
 
 ## Support
 
-For bug reports or feature requests, please use the [GitHub issue tracker](https://github.com/your-username/learndash-bulk-create/issues).
+For bug reports or feature requests, please use the [GitHub issue tracker](https://github.com/serenichron/learndash-bulk-create/issues).
 
 ## Contributing
 
