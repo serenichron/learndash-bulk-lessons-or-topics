@@ -2,7 +2,7 @@
 /**
  * Plugin Name: LearnDash Bulk Lessons Or Topics
  * Description: Adds functionality to bulk create Courses, Lessons, or Topics in LearnDash using a CSV file.
- * Version: 1.0.1
+ * Version: 1.0.2
  * Author: Vlad Tudorie
  * License: GPL v2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -59,48 +59,86 @@ class LearnDash_Bulk_Create {
         <?php
     }
 
-    public function handle_csv_upload() {
-        if (!isset($_POST['submit']) || !check_admin_referer('learndash_bulk_create', 'learndash_bulk_create_nonce')) {
-            return;
-        }
-
-        if (!current_user_can('manage_options')) {
-            wp_die(__('You do not have sufficient permissions to access this page.', 'learndash-bulk-create'));
-        }
-
-        if (!isset($_FILES['csv_file']) || $_FILES['csv_file']['error'] !== UPLOAD_ERR_OK) {
-            wp_die(__('CSV file upload failed. Please try again.', 'learndash-bulk-create'));
-        }
-
-        $csv_file = $_FILES['csv_file']['tmp_name'];
-        $csv_data = array_map('str_getcsv', file($csv_file));
-        $headers = array_shift($csv_data);
-
-        $created_count = 0;
-        $errors = array();
-
-        foreach ($csv_data as $row) {
-            $post_data = array_combine($headers, $row);
-            $result = $this->create_content($post_data);
-            if ($result === true) {
-                $created_count++;
-            } else {
-                $errors[] = $result;
-            }
-        }
-
-        $message = sprintf(__('%d items created successfully.', 'learndash-bulk-create'), $created_count);
-        if (!empty($errors)) {
-            $message .= ' ' . sprintf(__('%d errors occurred:', 'learndash-bulk-create'), count($errors));
-            $message .= '<ul>';
-            foreach ($errors as $error) {
-                $message .= '<li>' . esc_html($error) . '</li>';
-            }
-            $message .= '</ul>';
-        }
-
-        add_settings_error('learndash_bulk_create', 'learndash_bulk_create_result', $message, empty($errors) ? 'updated' : 'error');
+public function handle_csv_upload() {
+    if (!isset($_POST['submit']) || !check_admin_referer('learndash_bulk_create', 'learndash_bulk_create_nonce')) {
+        return;
     }
+
+    if (!current_user_can('manage_options')) {
+        wp_die(__('You do not have sufficient permissions to access this page.', 'learndash-bulk-create'));
+    }
+
+    if (!isset($_FILES['csv_file']) || $_FILES['csv_file']['error'] !== UPLOAD_ERR_OK) {
+        wp_die(__('CSV file upload failed. Please try again.', 'learndash-bulk-create'));
+    }
+
+    $csv_file = $_FILES['csv_file']['tmp_name'];
+    $csv_data = array_map('str_getcsv', file($csv_file));
+    $headers = array_shift($csv_data);
+
+    $created_count = 0;
+    $errors = array();
+
+    foreach ($csv_data as $row_index => $row) {
+        $post_data = array_combine($headers, $row);
+        $result = $this->create_content($post_data);
+        if ($result === true) {
+            $created_count++;
+        } else {
+            $errors[] = "Row " . ($row_index + 2) . ": " . $result; // +2 because of 0-indexing and header row
+        }
+    }
+
+    $message = sprintf(__('%d items created successfully.', 'learndash-bulk-create'), $created_count);
+    if (!empty($errors)) {
+        $message .= ' ' . sprintf(__('%d errors occurred:', 'learndash-bulk-create'), count($errors));
+        $message .= '<ul>';
+        foreach ($errors as $error) {
+            $message .= '<li>' . esc_html($error) . '</li>';
+        }
+        $message .= '</ul>';
+    }
+
+    add_settings_error('learndash_bulk_create', 'learndash_bulk_create_result', $message, empty($errors) ? 'updated' : 'error');
+}
+
+private function create_content($post_data) {
+    if (!isset($post_data['post_type']) || !in_array($post_data['post_type'], array('sfwd-courses', 'sfwd-lessons', 'sfwd-topic'))) {
+        return sprintf(__('Invalid post type: %s', 'learndash-bulk-create'), esc_html($post_data['post_type']));
+    }
+
+    $post_args = array(
+        'post_title'   => sanitize_text_field($post_data['post_title']),
+        'post_content' => wp_kses_post($post_data['post_content']),
+        'post_type'    => $post_data['post_type'],
+        'post_status'  => 'publish'
+    );
+
+    $post_id = wp_insert_post($post_args, true); // Set second argument to true to return WP_Error on failure
+
+    if (is_wp_error($post_id)) {
+        return sprintf(__('Error creating %s: %s', 'learndash-bulk-create'), $post_data['post_type'], $post_id->get_error_message());
+    }
+
+    // Set course relationship for lessons and topics
+    if (in_array($post_data['post_type'], array('sfwd-lessons', 'sfwd-topic')) && isset($post_data['course_id']) && !empty($post_data['course_id'])) {
+        update_post_meta($post_id, 'course_id', absint($post_data['course_id']));
+    }
+
+    // Set lesson relationship for topics
+    if ($post_data['post_type'] === 'sfwd-topic' && isset($post_data['lesson_id']) && !empty($post_data['lesson_id'])) {
+        update_post_meta($post_id, 'lesson_id', absint($post_data['lesson_id']));
+    }
+
+    // Add any additional meta fields
+    foreach ($post_data as $key => $value) {
+        if (!in_array($key, ['post_type', 'post_title', 'post_content', 'course_id', 'lesson_id']) && !empty($value)) {
+            update_post_meta($post_id, sanitize_key($key), sanitize_text_field($value));
+        }
+    }
+
+    return true;
+}
 
     private function create_content($post_data) {
         if (!isset($post_data['post_type']) || !in_array($post_data['post_type'], array('sfwd-courses', 'sfwd-lessons', 'sfwd-topic'))) {
