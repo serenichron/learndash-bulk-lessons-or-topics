@@ -14,12 +14,12 @@
 if (!defined('ABSPATH')) exit;
 
 // Enable error reporting
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
+// error_reporting(E_ALL);
+// ini_set('display_errors', 1);
 
 // Log errors
-ini_set('log_errors', 1);
-ini_set('error_log', dirname(__FILE__) . '/error_log.txt');
+// ini_set('log_errors', 1);
+// ini_set('error_log', dirname(__FILE__) . '/error_log.txt');
 
 class LearnDash_Bulk_Create {
     public function __construct() {
@@ -150,8 +150,6 @@ class LearnDash_Bulk_Create {
 }
 
 // Activation hook
-register_activation_hook(__FILE__, 'learndash_bulk_create_activate');
-
 function learndash_bulk_create_activate() {
     // Check if LearnDash is active
     if (!function_exists('is_plugin_active')) {
@@ -165,6 +163,7 @@ function learndash_bulk_create_activate() {
 
     // You can add more activation tasks here if needed
 }
+register_activation_hook(__FILE__, 'learndash_bulk_create_activate');
 
 // Initialize the plugin
-new LearnDash_Bulk_Create();
+$learndash_bulk_create = new LearnDash_Bulk_Create();
