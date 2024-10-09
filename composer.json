@@ -1,10 +1,16 @@
 {
     "name": "serenichron/learndash-bulk-lessons-or-topics",
-    "description": "Bulk Lesson and Topic creation for LearnDash",
-    "keywords": ["wordpress", "plugin"],
-    "homepage": "https://github.com/serenichron/learndash-bulk-lessons-or-topics",
+    "description": "A WordPress plugin to bulk create LearnDash courses, lessons, and topics using CSV files.",
     "type": "wordpress-plugin",
+    "license": "GPL-3.0-or-later",
+    "authors": [
+        {
+            "name": "Vlad Tudorie",
+            "email": "vlad@serenichron.com"
+        }
+    ],
     "require": {
-      "php": ">=5.6"
+        "php": ">=7.2",
+        "composer/installers": "~1.0"
     }
-  }
+}
