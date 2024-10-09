@@ -33,7 +33,7 @@ This plugin is designed to be installed using Composer. To install, follow these
      "repositories": [
        {
          "type": "vcs",
-         "url": "https://github.com/serenichron/learndash-bulk-create"
+         "url": "git@github.com:serenichron/learndash-bulk-lessons-or-topics.git"
        }
      ]
    }
