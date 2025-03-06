@@ -1,0 +1,20 @@
+{
+  "arrowParens": "avoid",
+  "braceStyle": "1tbs",
+  "bracketSpacing": true,
+  "insertPragma": false,
+  "jsxBracketSameLine": false,
+  "jsxSingleQuote": true,
+  "phpVersion": "8.2",
+  "printWidth": 120,
+  "quoteProps": "as-needed",
+  "rcVerbose": true,
+  "requirePragma": false,
+  "noSemi": true,
+  "singleQuote": true,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "trailingCommaPHP": true,
+  "useTabs": false,
+  "plugins": ["@prettier/plugin-php"]
+}
