@@ -34,6 +34,11 @@ class Quiz extends Post {
     $this->proId = $this->savePro();
   }
 
+  public function prev(Posts $posts) {
+    parent::prev($posts);
+    $this->proId = intval(get_post_meta($this->id, 'quiz_pro_id', true));
+  }
+
   public function updateMeta(Data $data, Posts $posts) {
     if ($posts->course?->exists()) {
       $parent = $posts->course;

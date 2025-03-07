@@ -36,8 +36,7 @@ abstract class Post {
     }
 
     if ($id === 'PREV') {
-      $id = $posts->prev?->{$post->type}?->id;
-      $post->id = $id;
+      $post->prev($posts);
       $data->setId($post->type, $post->id);
       return $post;
     }
@@ -90,6 +89,11 @@ abstract class Post {
         sprintf(__('Error updating %s: %s', 'extended-learndash-bulk-create'), $this->type, $res->get_error_message()),
       );
     }
+  }
+
+  public function prev(Posts $posts) {
+    $id = $posts->prev?->{$this->type}?->id;
+    $this->id = $id;
   }
 
   protected function setProps(Data $data) {

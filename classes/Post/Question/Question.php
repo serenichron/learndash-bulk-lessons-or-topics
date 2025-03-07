@@ -57,6 +57,11 @@ class Question extends Post {
     }
   }
 
+  public function prev(Posts $posts) {
+    parent::prev($posts);
+    $this->quizQuestionId = intval(get_post_meta($this->id, 'question_pro_id', true));
+  }
+
   public function updateMeta(Data $data, Posts $posts) {
     if ($posts->quiz?->exists()) {
       update_post_meta($this->id, 'question_type', $this->questionType);
