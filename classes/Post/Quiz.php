@@ -62,7 +62,7 @@ class Quiz extends Post {
       $questionProId = $posts->question->getProId();
 
       if ($questionProId) {
-        $questions = unserialize(get_post_meta($this->id, 'ld_quiz_questions', true));
+        $questions = get_post_meta($this->id, 'ld_quiz_questions', true);
         if (!is_array($questions)) {
           $questions = [];
         }
@@ -75,7 +75,7 @@ class Quiz extends Post {
 
       $oldQuizId = get_post_meta($questionId, 'quiz_id', true);
       if ($oldQuizId && $oldQuizId !== $this->id) {
-        $questions = unserialize(get_post_meta($oldQuizId, 'ld_quiz_questions', true));
+        $questions = get_post_meta($oldQuizId, 'ld_quiz_questions', true);
 
         if (is_array($questions) && isset($questions[$questionId])) {
           unset($questions[$questionId]);
