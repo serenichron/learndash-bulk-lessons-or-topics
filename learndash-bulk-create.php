@@ -17,6 +17,7 @@ if (!defined('ABSPATH')) {
 
 require_once __DIR__ . '/vendor/autoload.php';
 
+use TSTPrep\LDImporter\CourseExporter;
 use TSTPrep\LDImporter\Data;
 use TSTPrep\LDImporter\Post\Posts;
 use TSTPrep\LDImporter\QuestionConverter;
@@ -51,7 +52,7 @@ class Extended_LearnDash_Bulk_Create {
       'extended-learndash-bulk-create',
       plugin_dir_url(__FILE__) . 'js/admin.js',
       ['jquery'],
-      '2.0',
+      null,
       true,
     );
     wp_localize_script('extended-learndash-bulk-create', 'eldbc_ajax', [
@@ -61,6 +62,7 @@ class Extended_LearnDash_Bulk_Create {
   }
 
   public function admin_page() {
+    CourseExporter::export2();
     include __DIR__ . '/templates/admin-page.php';
   }
 

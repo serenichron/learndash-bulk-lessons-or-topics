@@ -13,6 +13,10 @@ class FillTheBlanksQuestion extends Question implements WordCounter {
   protected function setProps(Data $data) {
     parent::setProps($data);
 
+    if (!$this->customFields[0]) {
+      return;
+    }
+
     $this->correct = $this->customFields[0];
     $this->answerData = [
       new WpProQuiz_Model_AnswerTypes([

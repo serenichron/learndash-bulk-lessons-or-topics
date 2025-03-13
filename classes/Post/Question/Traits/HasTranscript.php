@@ -7,6 +7,10 @@ use TSTPrep\LDImporter\Post\Posts;
 
 trait HasTranscript {
   public function updateTranscriptMeta(Data $data, Posts $posts) {
+    if (!$this->correct) {
+      return;
+    }
+
     $settings = $this->getTranscriptSettings();
 
     // Define the allowed symbols

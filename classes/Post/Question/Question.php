@@ -27,7 +27,7 @@ class Question extends Post {
 
   protected function setProps(Data $data) {
     parent::setProps($data);
-    $this->questionType = $data->questionType();
+    $this->questionType = $data->questionType() ?? '';
     $this->customFields = [$data->questionField(1), $data->questionField(2)];
     $this->correct = $this->customFields[0];
   }

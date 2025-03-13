@@ -18,5 +18,10 @@
     "psr-4": {
       "TSTPrep\\LDImporter\\": "classes/"
     }
+  },
+  "config": {
+    "allow-plugins": {
+      "composer/installers": true
+    }
   }
 }

@@ -13,6 +13,10 @@ class CompleteThePassageQuestion extends Question implements WordCounter {
   protected function setProps(Data $data) {
     parent::setProps($data);
 
+    if (!$this->customFields[0] || !$this->customFields[1]) {
+      return;
+    }
+
     $options = array_map('trim', explode(';', $this->customFields[0]));
     $corrects = array_map('trim', explode(';', $this->customFields[1]));
 

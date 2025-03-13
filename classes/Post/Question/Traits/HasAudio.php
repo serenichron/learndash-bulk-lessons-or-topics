@@ -7,6 +7,10 @@ use TSTPrep\LDImporter\Post\Posts;
 
 trait HasAudio {
   public function updateAudioMeta(Data $data, Posts $posts) {
+    if (!$this->correct) {
+      return;
+    }
+
     $settings = $this->getAudioSettings();
 
     update_post_meta($this->id, '_ld_advanced_audio_questions', [

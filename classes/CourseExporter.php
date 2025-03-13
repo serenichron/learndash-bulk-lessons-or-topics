@@ -23,4 +23,28 @@ class CourseExporter {
       }
     }
   }
+
+  public static function export2() {
+    $ids = array_map('str_getcsv', file(__DIR__ . '/quizzes.csv'));
+    array_shift($ids);
+    $writer = new TemplateWriter(__DIR__ . '/questions.csv');
+
+    foreach ($ids as $id) {
+      $id = intval($id[0]);
+      $quiz = get_post($id);
+
+      $questions = get_post_meta($id, 'ld_quiz_questions', true);
+      $questions = is_array($questions) ? $questions : [];
+
+      foreach ($questions as $questionId => $questionProId) {
+        $question = get_post($questionId);
+        $questionType = get_post_meta($questionId, 'question_type', true);
+
+        $writer->quiz($id, $quiz->post_title, $quiz->post_content);
+        $writer->question($questionId, $question->post_title, $question->post_content);
+        $writer->questionType($questionType);
+        $writer->flush();
+      }
+    }
+  }
 }

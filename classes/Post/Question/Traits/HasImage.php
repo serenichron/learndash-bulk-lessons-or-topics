@@ -7,6 +7,10 @@ use TSTPrep\LDImporter\Post\Posts;
 
 trait HasImage {
   public function updateImageMeta(Data $data, Posts $posts) {
+    if (!$this->correct) {
+      return;
+    }
+
     $settings = $this->getImageSettings();
 
     update_post_meta($this->id, '_ld_tstprep_image_description', [

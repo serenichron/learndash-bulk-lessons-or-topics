@@ -9,12 +9,4 @@ jQuery(document).ready(function($) {
     $('#select-all').on('change', function() {
         $('input[name="confirm[]"]').prop('checked', $(this).prop('checked'));
     });
-
-    $('form').on('submit', function(e) {
-        var checkedBoxes = $('input[name="confirm[]"]:checked').length;
-        if (checkedBoxes === 0) {
-            e.preventDefault();
-            alert('Please select at least one change to apply.');
-        }
-    });
 });

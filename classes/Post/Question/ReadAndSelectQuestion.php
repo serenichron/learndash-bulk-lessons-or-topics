@@ -14,6 +14,10 @@ class ReadAndSelectQuestion extends Question implements WordCounter {
   protected function setProps(Data $data) {
     parent::setProps($data);
 
+    if (!$this->customFields[0] || !$this->customFields[1]) {
+      return;
+    }
+
     $options = explode(',', $this->customFields[0]);
     $corrects = explode(',', $this->customFields[1]);
 
@@ -46,7 +50,10 @@ class ReadAndSelectQuestion extends Question implements WordCounter {
 
   public function updateMeta(Data $data, Posts $posts) {
     parent::updateMeta($data, $posts);
-    update_post_meta($this->id, '_ld_advanced_swipe_questions', $this->correct);
+
+    if ($this->correct) {
+      update_post_meta($this->id, '_ld_advanced_swipe_questions', $this->correct);
+    }
   }
 
   public function getWordCounterSettings(): array {
