@@ -15,7 +15,9 @@ if (!defined('ABSPATH')) {
   exit();
 }
 
-require_once __DIR__ . '/vendor/autoload.php';
+if (file_exists(__DIR__ . '/vendor/autoload.php')) {
+  require_once __DIR__ . '/vendor/autoload.php';
+}
 
 use TSTPrep\LDImporter\CourseExporter;
 use TSTPrep\LDImporter\Data;
