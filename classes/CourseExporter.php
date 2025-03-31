@@ -25,8 +25,17 @@ class CourseExporter {
   }
 
   public static function export2() {
-    $ids = array_map('str_getcsv', file(__DIR__ . '/quizzes.csv'));
-    array_shift($ids);
+    $quiz_csv_path = __DIR__ . '/quizzes.csv';
+    $file_content = @file($quiz_csv_path); // Use @ to suppress the warning if file doesn't exist
+
+    if ($file_content === false) {
+        error_log("CourseExporter::export2() - Failed to read quiz file: " . $quiz_csv_path);
+        $ids = []; // Initialize as empty array to prevent fatal error
+    } else {
+        $ids = array_map('str_getcsv', $file_content);
+        array_shift($ids); // Remove header row only if file was read successfully
+    }
+
     $writer = new TemplateWriter(__DIR__ . '/questions.csv');
 
     foreach ($ids as $id) {
