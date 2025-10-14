@@ -19,6 +19,7 @@ if (file_exists(__DIR__ . '/vendor/autoload.php')) {
   require_once __DIR__ . '/vendor/autoload.php';
 }
 
+use League\Csv\Reader;
 use TSTPrep\LDImporter\Data;
 use TSTPrep\LDImporter\Post\Posts;
 
@@ -83,14 +84,15 @@ class Extended_LearnDash_Bulk_Create {
       wp_die(__('CSV file upload failed. Please try again.', 'extended-learndash-bulk-create'));
     }
 
-      $file = fopen($_FILES['csv_file']['tmp_name'], 'r');
-      $headers = fgetcsv($file);
     if ($action_type === 'update') {
+      $reader = Reader::createFromPath($_FILES['csv_file']['tmp_name']);
+      $reader->setHeaderOffset(0);
+      $records = $reader->getRecords();
 
       $oldPosts = null;
 
-      while (($row = fgetcsv($file)) !== false) {
-        $data = new Data(array_combine($headers, $row));
+      foreach ($records as $record) {
+        $data = new Data($record);
         $posts = new Posts();
         $posts->createOrUpdate($data, $oldPosts);
         $posts->updateMeta($data);
