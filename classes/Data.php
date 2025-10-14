@@ -37,8 +37,24 @@ class Data {
     return $this->getValue($type . '_post_content');
   }
 
+  public function quizAffixes() {
+    return $this->getJsonValue('quiz_affixes');
+  }
+
   public function questionType(): ?string {
     return $this->getValue('question_type');
+  }
+
+  public function questionAnswers() {
+    return $this->getJsonValue('question_answers') ?? [];
+  }
+
+  public function questionMeta() {
+    return $this->getJsonValue('question_meta');
+  }
+
+  public function questionAffixes() {
+    return $this->getJsonValue('question_affixes');
   }
 
   public function questionField(int $number): ?string {
@@ -57,6 +73,15 @@ class Data {
     }
 
     return $value;
+  }
+
+  private function getJsonValue(string $key) {
+    $answers = $this->getValue($key);
+    if ($answers !== null) {
+      $answers = json_decode($answers, true);
+    }
+
+    return $answers;
   }
 
   public function setId(string $type, ?int $id) {
