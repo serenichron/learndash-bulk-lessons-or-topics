@@ -1,6 +1,0 @@
-post_type,post_title,post_content,course_id,lesson_id,custom_field_1,custom_field_2
-sfwd-courses,Example Course,This is an example course,,,,
-sfwd-lessons,Example Lesson 1,This is the content of Example Lesson 1,1,,,
-sfwd-lessons,Example Lesson 2,This is the content of Example Lesson 2,1,,,
-sfwd-topic,Example Topic 1,This is the content of Example Topic 1,1,2,,
-sfwd-topic,Example Topic 2,This is the content of Example Topic 2,1,2,,

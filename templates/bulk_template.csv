@@ -1,6 +1,0 @@
-ID,post_type,post_title,post_content,course_id,lesson_id,quiz_id,custom_field_1,custom_field_2
-,sfwd-courses,Example Course,This is an example course,,,,custom_value_1,custom_value_2
-,sfwd-lessons,Example Lesson,This is an example lesson,1,,,custom_value_3,custom_value_4
-,sfwd-topic,Example Topic,This is an example topic,1,2,,custom_value_5,custom_value_6
-,sfwd-quiz,Example Quiz,This is an example quiz,1,2,,custom_value_7,custom_value_8
-,sfwd-question,Example Question,This is an example question,,,1,custom_value_9,custom_value_10

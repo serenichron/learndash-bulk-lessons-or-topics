@@ -21,7 +21,6 @@ if (file_exists(__DIR__ . '/vendor/autoload.php')) {
 
 use TSTPrep\LDImporter\Data;
 use TSTPrep\LDImporter\Post\Posts;
-use TSTPrep\LDImporter\QuestionConverter;
 
 class Extended_LearnDash_Bulk_Create {
   private $supported_post_types = ['sfwd-courses', 'sfwd-lessons', 'sfwd-topic', 'sfwd-quiz', 'sfwd-question'];
@@ -84,12 +83,9 @@ class Extended_LearnDash_Bulk_Create {
       wp_die(__('CSV file upload failed. Please try again.', 'extended-learndash-bulk-create'));
     }
 
-    if ($action_type === 'update-legacy') {
-      $this->url = (new QuestionConverter())->create($_FILES['csv_file']['tmp_name']);
-      return;
-    } elseif ($action_type === 'update') {
       $file = fopen($_FILES['csv_file']['tmp_name'], 'r');
       $headers = fgetcsv($file);
+    if ($action_type === 'update') {
 
       $oldPosts = null;
 
@@ -101,16 +97,6 @@ class Extended_LearnDash_Bulk_Create {
         $oldPosts = $posts;
       }
     }
-
-    // $csv_file = $_FILES['csv_file']['tmp_name'];
-    // $csv_data = array_map('str_getcsv', file($csv_file));
-    // $headers = array_shift($csv_data);
-
-    // if ($action_type === 'create') {
-    //   $this->process_create($content_type, $csv_data, $headers);
-    // } elseif ($action_type === 'update') {
-    //   $this->process_update($content_type, $csv_data, $headers);
-    // }
   }
 
   private function process_create($content_type, $csv_data, $headers) {
