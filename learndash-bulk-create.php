@@ -21,6 +21,7 @@ if (file_exists(__DIR__ . '/vendor/autoload.php')) {
 
 use League\Csv\Reader;
 use TSTPrep\LDImporter\Data;
+use TSTPrep\LDImporter\Exporter;
 use TSTPrep\LDImporter\Post\Posts;
 
 class Extended_LearnDash_Bulk_Create {
@@ -31,6 +32,7 @@ class Extended_LearnDash_Bulk_Create {
   public function __construct() {
     add_action('admin_menu', [$this, 'add_admin_menu']);
     add_action('admin_init', [$this, 'handle_form_submission']);
+    add_action('wp_ajax_ld_import_gen_template', [$this, 'gen_template']);
     add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_scripts']);
   }
 
@@ -53,7 +55,7 @@ class Extended_LearnDash_Bulk_Create {
       'extended-learndash-bulk-create',
       plugin_dir_url(__FILE__) . 'js/admin.js',
       ['jquery'],
-      null,
+      time(),
       true,
     );
     wp_localize_script('extended-learndash-bulk-create', 'eldbc_ajax', [
@@ -64,6 +66,11 @@ class Extended_LearnDash_Bulk_Create {
 
   public function admin_page() {
     include __DIR__ . '/templates/admin-page.php';
+  }
+
+  public function gen_template() {
+    Exporter::export();
+    die();
   }
 
   public function handle_form_submission() {
