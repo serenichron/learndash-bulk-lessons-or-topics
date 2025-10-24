@@ -3,6 +3,7 @@
 namespace TSTPrep\LDImporter;
 
 use TSTPrep\LDAdvancedQuizzes\CarbonFields\QuestionAffix;
+use TSTPrep\LDAdvancedQuizzes\CarbonFields\QuizAffix;
 use TSTPrep\LDAdvancedQuizzes\Questions;
 
 class Exporter {
@@ -52,6 +53,7 @@ class Exporter {
       }
 
       $writer->quiz($quizId, $quiz->post_title, $quiz->post_content);
+      $writer->quizAffixes(QuizAffix::getAffixes($quiz->ID));
     } else {
       $writer->quiz($quizId);
     }

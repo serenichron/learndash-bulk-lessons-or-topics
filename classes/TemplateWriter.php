@@ -62,6 +62,10 @@ class TemplateWriter {
     $this->set('quiz', $id, $title, $content);
   }
 
+  public function quizAffixes($affixes) {
+    $this->data['quiz_affixes'] = json_encode($affixes);
+  }
+
   public function question(int|string|null $id = null, ?string $title = null, ?string $content = null) {
     $this->set('question', $id, $title, $content);
   }
