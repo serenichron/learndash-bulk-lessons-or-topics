@@ -69,6 +69,19 @@ class Question extends Post {
       update_post_meta($this->id, 'quiz_id', $posts->quiz->id);
       update_post_meta($this->id, 'ld_quiz_id', $posts->quiz->getProId());
       update_post_meta($this->id, '_sfwd-question', ['sfwd-question_quiz' => (string) $posts->quiz->id]);
+      $questions = get_post_meta($posts->quiz->id, 'ld_quiz_questions', true);
+
+      if (is_array($questions)) {
+        $keys = array_keys($questions);
+        $index = array_search($this->id, $keys);
+        if ($index === false) {
+          $index = 0;
+        }
+
+        remove_action('post_updated', 'wp_save_post_revision');
+        wp_update_post(['ID' => $this->id, 'menu_order' => $index]);
+        add_action('post_updated', 'wp_save_post_revision');
+      }
     }
 
     $values = $data->questionMeta();
