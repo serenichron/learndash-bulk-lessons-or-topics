@@ -37,6 +37,10 @@ class Data {
     return $this->getValue($type . '_post_content');
   }
 
+  public function quizMeta() {
+    return $this->getJsonValue('quiz_meta');
+  }
+
   public function quizAffixes() {
     return $this->getJsonValue('quiz_affixes');
   }

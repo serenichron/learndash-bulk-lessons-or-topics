@@ -89,6 +89,13 @@ class Quiz extends Post {
     if (!empty($affixes)) {
       QuizAffix::saveAffixes($this->id, $affixes);
     }
+
+    $values = $data->quizMeta();
+    if (!empty($values)) {
+      if (isset($values['quiz_type'])) {
+        update_post_meta($this->id, 'quiz_type', $values['quiz_type']);
+      }
+    }
   }
 
   protected function savePro(): int {
