@@ -104,6 +104,7 @@ class Extended_LearnDash_Bulk_Create {
         $posts->createOrUpdate($data, $oldPosts);
         $posts->updateMeta($data);
         $oldPosts = $posts;
+        sleep(1);
       }
     }
   }
