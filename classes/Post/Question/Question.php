@@ -23,6 +23,7 @@ class Question extends Post {
   protected int $correctSameAsText = 0;
   protected $correct = '';
   protected $answerData = [];
+  protected $proFields = [];
   protected RegisteredQuestion $registered;
 
   protected function setProps(Data $data) {
@@ -38,6 +39,11 @@ class Question extends Post {
     } else {
       $this->answerData = $answers['answerData'];
     }
+
+    $this->proFields = array_intersect_key(
+      $data->questionProFields(),
+      array_flip(['correctSameText', 'correctMsg', 'incorrectMsg', 'answerPointsActivated', 'showPointsInBox']),
+    );
   }
 
   public function create(Posts $posts) {
@@ -89,10 +95,16 @@ class Question extends Post {
       $fields = $this->registered->getMetaFields();
       foreach ($fields as $key => $field) {
         if (!isset($values[$key])) {
+          error_log('[Import Question]: Field ' . $key . ' is not set.');
           continue;
         }
 
         $field->saveValue($this->id, $values[$key]);
+        unset($values[$key]);
+      }
+
+      foreach ($values as $key => $value) {
+        error_log('[Import Question]: Value ' . $key . ' does not have a corresponding field.');
       }
     }
 
@@ -103,26 +115,27 @@ class Question extends Post {
   }
 
   protected function savePro(Posts $posts, int $proId): int {
-    $question = new WpProQuiz_Model_Question([
-      'id' => $proId,
-      'questionPostId' => $this->id,
-      'quizId' => $posts->quiz->getProId(),
-      'sort' => 1,
-      'title' => $this->title,
-      'question' => $this->content,
-      'answerType' => $this->questionType,
-      'answerData' => $this->answerData,
-      // 'correctSameText' => $this->correctSameAsText,
-      // 'correctMsg'                     => $this->getCorrectMsg(),
-      // 'incorrectMsg'                   => $this->getIncorrectMsg(),
-      // 'correctSameText'                => $this->isCorrectSameText(),
-      // 'points'                         => $this->getPoints(),
-      // 'showPointsInBox'                => $this->isShowPointsInBox(),
-      // 'answerPointsActivated'          => $this->isAnswerPointsActivated(),
-      // 'answerPointsDiffModusActivated' => $this->isAnswerPointsDiffModusActivated(),
-      // 'disableCorrect'                 => $this->isDisableCorrect(),
-      // 'matrixSortAnswerCriteriaWidth'  => $this->getMatrixSortAnswerCriteriaWidth(),
-    ]);
+    $question = new WpProQuiz_Model_Question(
+      array_merge(
+        [
+          'id' => $proId,
+          'questionPostId' => $this->id,
+          'quizId' => $posts->quiz->getProId(),
+          'sort' => 1,
+          'title' => $this->title,
+          'question' => $this->content,
+          'answerType' => $this->questionType,
+          'answerData' => $this->answerData,
+          // 'points'                         => $this->getPoints(),
+          // 'showPointsInBox'                => $this->isShowPointsInBox(),
+          // 'answerPointsActivated'          => $this->isAnswerPointsActivated(),
+          // 'answerPointsDiffModusActivated' => $this->isAnswerPointsDiffModusActivated(),
+          // 'disableCorrect'                 => $this->isDisableCorrect(),
+          // 'matrixSortAnswerCriteriaWidth'  => $this->getMatrixSortAnswerCriteriaWidth(),
+        ],
+        $this->proFields,
+      ),
+    );
 
     $mapper = new WpProQuiz_Model_QuestionMapper();
     $question = $mapper->save($question);

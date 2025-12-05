@@ -49,6 +49,10 @@ class Data {
     return $this->getValue('question_type');
   }
 
+  public function questionProFields() {
+    return $this->getJsonValue('question_pro_fields') ?? [];
+  }
+
   public function questionAnswers() {
     return $this->getJsonValue('question_answers') ?? [];
   }

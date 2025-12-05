@@ -38,7 +38,7 @@ class TemplateWriter {
     $this->columns[] = 'question_meta';
     $this->columns[] = 'question_affixes';
 
-    $this->writer = Writer::createFromString('');
+    $this->writer = Writer::createFromString('')->setDelimiter(';');
     $this->writer->insertOne($this->columns);
   }
 

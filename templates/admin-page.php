@@ -16,8 +16,40 @@ $types = ['quiz'];
         <th scope="row"><label for="action_type"><?php _e('Action', 'extended-learndash-bulk-create'); ?></label></th>
         <td>
           <select name="action_type" id="action_type">
+            <option value="delete"><?php _e('Delete', 'extended-learndash-bulk-create'); ?></option>
+            <option value="update2"><?php _e('Update2', 'extended-learndash-bulk-create'); ?></option>
+          </select>
+        </td>
+      </tr>
+      <tr>
+        <th scope="row"><label for="quizId">Quiz Id</label></th>
+        <td>
+          <input name="quizId" id="quizId">
+        </td>
+      </tr>
+    </table>
+    <p class="submit">
+      <input type="submit" name="submit" id="submit" class="button button-primary" style="background-color: red;" value="<?php _e(
+        'Delete Quiz',
+        'extended-learndash-bulk-create',
+      ); ?>">
+    </p>
+  </form>
+  <form method="post" enctype="multipart/form-data">
+    <?php wp_nonce_field('extended_learndash_bulk_create', 'extended_learndash_bulk_create_nonce'); ?>
+    <table class="form-table">
+      <tr>
+        <th scope="row"><label for="action_type"><?php _e('Action', 'extended-learndash-bulk-create'); ?></label></th>
+        <td>
+          <select name="action_type" id="action_type">
             <option value="update"><?php _e('Update', 'extended-learndash-bulk-create'); ?></option>
           </select>
+        </td>
+      </tr>
+      <tr>
+        <th scope="row"><label for="quizId">Quiz Id</label></th>
+        <td>
+          <input name="quizId" id="quizId">
         </td>
       </tr>
       <tr>
@@ -69,6 +101,12 @@ $types = ['quiz'];
         </tr>
       <?php
       endfor; ?>
+      <tr>
+        <th scope="row"><label for="siblings">Include sibling questions</label></th>
+        <td>
+          <input type="checkbox" name="siblings" id="siblings" value="1">
+        </td>
+      </tr>
       <tr>
         <th scope="row"><label for="questionId">Question Id</label></th>
         <td>

@@ -5,6 +5,7 @@ namespace TSTPrep\LDImporter;
 use TSTPrep\LDAdvancedQuizzes\CarbonFields\QuestionAffix;
 use TSTPrep\LDAdvancedQuizzes\CarbonFields\QuizAffix;
 use TSTPrep\LDAdvancedQuizzes\Questions;
+use WP_Post;
 
 class Exporter {
   public static function export() {
@@ -29,18 +30,21 @@ class Exporter {
     }
 
     $writer = new TemplateWriter($included);
-    $writer->question($question->ID, $question->post_title, $question->post_content);
-    $type = get_post_meta($question->ID, 'question_type', true);
-    $writer->questionType($type);
+    static::writeFirstRow($writer, $question);
 
-    $registered = Questions::getQuestion($type);
-    $writer->questionAnswers($registered->getAnswerFields()->load($question->ID));
-    $writer->questionMeta(array_map(static fn($group) => $group->load($question->ID), $registered->getMetaFields()));
-    $writer->questionAffixes(QuestionAffix::getAffixes($question->ID));
+    if (isset($_POST['siblings'])) {
+      static::writeQuestionSiblings($writer, $question);
+    }
+
+    $writer->download();
+  }
+
+  private static function writeFirstRow(TemplateWriter $writer, WP_Post $question) {
+    static::writeQuestion($writer, $question);
 
     if (!isset($included['quiz'])) {
       $writer->flush();
-      $writer->download();
+      return;
     }
 
     $quizId = get_post_meta($question->ID, 'quiz_id', true);
@@ -60,10 +64,31 @@ class Exporter {
 
     // if (!isset($included['topic'])) {
     //   $writer->flush();
-    //   $writer->download();
+    //   return;
     // }
 
     $writer->flush();
-    $writer->download();
+  }
+
+  private static function writeQuestionSiblings(TemplateWriter $writer, WP_Post $question) {
+    $quizId = get_post_meta($question->ID, 'quiz_id', true);
+    $questions = get_post_meta($quizId, 'ld_quiz_questions', true);
+    unset($questions[$question->ID]);
+
+    foreach ($questions as $id => $proId) {
+      static::writeQuestion($writer, get_post($id));
+      $writer->flush();
+    }
+  }
+
+  private static function writeQuestion(TemplateWriter $writer, WP_Post $question) {
+    $writer->question($question->ID, $question->post_title, $question->post_content);
+    $type = get_post_meta($question->ID, 'question_type', true);
+    $writer->questionType($type);
+
+    $registered = Questions::getQuestion($type);
+    $writer->questionAnswers($registered->getAnswerFields()->load($question->ID));
+    $writer->questionMeta(array_map(static fn($group) => $group->load($question->ID), $registered->getMetaFields()));
+    $writer->questionAffixes(QuestionAffix::getAffixes($question->ID));
   }
 }

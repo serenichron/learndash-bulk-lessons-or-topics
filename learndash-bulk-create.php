@@ -87,11 +87,59 @@ class Extended_LearnDash_Bulk_Create {
 
     $action_type = $_POST['action_type'];
 
-    if (!isset($_FILES['csv_file']) || $_FILES['csv_file']['error'] !== UPLOAD_ERR_OK) {
+    if ($action_type === 'update' && (!isset($_FILES['csv_file']) || $_FILES['csv_file']['error'] !== UPLOAD_ERR_OK)) {
       wp_die(__('CSV file upload failed. Please try again.', 'extended-learndash-bulk-create'));
     }
 
-    if ($action_type === 'update') {
+    if ($action_type === 'delete') {
+      $ids = explode(',', $_POST['quizId']);
+      foreach ($ids as $id) {
+        $id = trim($id);
+        $questions = get_post_meta($id, 'ld_quiz_questions', true);
+        if (is_array($questions)) {
+          $questions = array_keys($questions);
+          foreach ($questions as $q) {
+            wp_delete_post($q, true);
+          }
+          wp_delete_post($id, true);
+        }
+      }
+    } elseif ($action_type === 'update2') {
+      $id = 1437641;
+      $questions = get_post_meta($id, 'ld_quiz_questions', true);
+      if (is_array($questions)) {
+        $questions = array_keys($questions);
+        foreach ($questions as $q) {
+          wp_delete_post($q, true);
+        }
+        wp_delete_post($id, true);
+      }
+
+      $reader = Reader::createFromPath(__DIR__ . '/templates/demo.csv');
+      $reader->setHeaderOffset(0);
+      $records = $reader->getRecords();
+
+      $oldPosts = null;
+
+      foreach ($records as $record) {
+        $data = new Data($record);
+        $posts = new Posts();
+        $posts->createOrUpdate($data, $oldPosts);
+        $posts->updateMeta($data);
+        $oldPosts = $posts;
+        sleep(1);
+      }
+    } elseif ($action_type === 'update') {
+      $id = $_POST['quizId'] ?? 0;
+      $questions = get_post_meta($id, 'ld_quiz_questions', true);
+      if (is_array($questions)) {
+        $questions = array_keys($questions);
+        foreach ($questions as $q) {
+          wp_delete_post($q, true);
+        }
+        wp_delete_post($id, true);
+      }
+
       $reader = Reader::createFromPath($_FILES['csv_file']['tmp_name']);
       $reader->setHeaderOffset(0);
       $records = $reader->getRecords();
