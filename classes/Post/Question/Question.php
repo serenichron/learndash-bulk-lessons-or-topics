@@ -3,13 +3,12 @@
 namespace TSTPrep\LDImporter\Post\Question;
 
 use Exception;
+use TSTPrep\LDAdvancedQuizzes\CarbonFields\QuestionAffix;
+use TSTPrep\LDAdvancedQuizzes\Questions;
+use TSTPrep\LDAdvancedQuizzes\RegisteredQuestion;
 use TSTPrep\LDImporter\Data;
 use TSTPrep\LDImporter\Post\Post;
 use TSTPrep\LDImporter\Post\Posts;
-use TSTPrep\LDImporter\Post\Question\Contracts\Audio;
-use TSTPrep\LDImporter\Post\Question\Contracts\Image;
-use TSTPrep\LDImporter\Post\Question\Contracts\Transcript;
-use TSTPrep\LDImporter\Post\Question\Contracts\WordCounter;
 use WpProQuiz_Model_Question;
 use WpProQuiz_Model_QuestionMapper;
 
@@ -24,80 +23,119 @@ class Question extends Post {
   protected int $correctSameAsText = 0;
   protected $correct = '';
   protected $answerData = [];
+  protected $proFields = [];
+  protected RegisteredQuestion $registered;
 
   protected function setProps(Data $data) {
     parent::setProps($data);
     $this->questionType = $data->questionType() ?? '';
     $this->customFields = [$data->questionField(1), $data->questionField(2)];
     $this->correct = $this->customFields[0];
+
+    $this->registered = Questions::getQuestion($this->questionType);
+    $answers = $this->registered->getAnswerFields()->formatAnswers($data->questionAnswers());
+    if (array_is_list($answers)) {
+      $this->answerData = $answers;
+    } else {
+      $this->answerData = $answers['answerData'];
+    }
+
+    $this->proFields = array_intersect_key(
+      $data->questionProFields(),
+      array_flip(['correctSameText', 'correctMsg', 'incorrectMsg', 'answerPointsActivated', 'showPointsInBox']),
+    );
   }
 
   public function create(Posts $posts) {
     parent::create($posts);
 
-    if (!$posts->quiz?->exists() || !$posts->quiz->getProId()) {
-      return;
-    }
-
-    $this->quizQuestionId = $this->savePro($posts);
+    $this->quizQuestionId = $this->savePro($posts, 0);
     update_post_meta($this->id, 'question_pro_id', $this->quizQuestionId);
     update_post_meta($this->id, 'question_points', 1);
   }
 
   public function update(Posts $posts) {
     parent::update($posts);
-    $this->quizQuestionId = intval(get_post_meta($this->id, 'question_pro_id', true));
 
-    if ($posts->quiz?->exists() && $posts->quiz->getProId()) {
-      $newId = $this->savePro($posts);
-      if ($newId !== $this->quizQuestionId) {
-        $this->quizQuestionId = $newId;
-        update_post_meta($this->id, 'question_pro_id', $this->quizQuestionId);
-      }
+    $proId = intval(get_post_meta($this->id, 'question_pro_id', true));
+    $this->quizQuestionId = $this->savePro($posts, $proId);
+    if ($this->quizQuestionId !== $proId) {
+      update_post_meta($this->id, 'question_pro_id', $this->quizQuestionId);
     }
   }
 
   public function prev(Posts $posts) {
-    parent::prev($posts);
-    $this->quizQuestionId = intval(get_post_meta($this->id, 'question_pro_id', true));
+    throw new Exception(__('Questions don\'t support prev', 'extended-learndash-bulk-create'));
   }
 
   public function updateMeta(Data $data, Posts $posts) {
+    update_post_meta($this->id, 'question_type', $this->questionType);
+
     if ($posts->quiz?->exists()) {
-      update_post_meta($this->id, 'question_type', $this->questionType);
       update_post_meta($this->id, 'quiz_id', $posts->quiz->id);
       update_post_meta($this->id, 'ld_quiz_id', $posts->quiz->getProId());
       update_post_meta($this->id, '_sfwd-question', ['sfwd-question_quiz' => (string) $posts->quiz->id]);
+      $questions = get_post_meta($posts->quiz->id, 'ld_quiz_questions', true);
+
+      if (is_array($questions)) {
+        $keys = array_keys($questions);
+        $index = array_search($this->id, $keys);
+        if ($index === false) {
+          $index = 0;
+        }
+
+        remove_action('post_updated', 'wp_save_post_revision');
+        wp_update_post(['ID' => $this->id, 'menu_order' => $index]);
+        add_action('post_updated', 'wp_save_post_revision');
+      }
     }
 
-    if ($this instanceof Audio) {
-      $this->updateAudioMeta($data, $posts);
+    $values = $data->questionMeta();
+    if (!empty($values)) {
+      $fields = $this->registered->getMetaFields();
+      foreach ($fields as $key => $field) {
+        if (!isset($values[$key])) {
+          error_log('[Import Question]: Field ' . $key . ' is not set.');
+          continue;
+        }
+
+        $field->saveValue($this->id, $values[$key]);
+        unset($values[$key]);
+      }
+
+      foreach ($values as $key => $value) {
+        error_log('[Import Question]: Value ' . $key . ' does not have a corresponding field.');
+      }
     }
 
-    if ($this instanceof Transcript) {
-      $this->updateTranscriptMeta($data, $posts);
-    }
-
-    if ($this instanceof WordCounter) {
-      $this->updateWordCounterMeta($data, $posts);
-    }
-
-    if ($this instanceof Image) {
-      $this->updateImageMeta($data, $posts);
+    $affixes = $data->questionAffixes();
+    if (!empty($affixes)) {
+      QuestionAffix::saveAffixes($this->id, $affixes);
     }
   }
 
-  protected function savePro(Posts $posts): int {
-    $question = new WpProQuiz_Model_Question([
-      'id' => $this->quizQuestionId,
-      'quizId' => $posts->quiz->getProId(),
-      'title' => $this->title,
-      'question' => $this->content,
-      'answerType' => $this->questionType,
-      'sort' => 1,
-      'correctSameText' => $this->correctSameAsText,
-      'answerData' => $this->answerData,
-    ]);
+  protected function savePro(Posts $posts, int $proId): int {
+    $question = new WpProQuiz_Model_Question(
+      array_merge(
+        [
+          'id' => $proId,
+          'questionPostId' => $this->id,
+          'quizId' => $posts->quiz->getProId(),
+          'sort' => 1,
+          'title' => $this->title,
+          'question' => $this->content,
+          'answerType' => $this->questionType,
+          'answerData' => $this->answerData,
+          // 'points'                         => $this->getPoints(),
+          // 'showPointsInBox'                => $this->isShowPointsInBox(),
+          // 'answerPointsActivated'          => $this->isAnswerPointsActivated(),
+          // 'answerPointsDiffModusActivated' => $this->isAnswerPointsDiffModusActivated(),
+          // 'disableCorrect'                 => $this->isDisableCorrect(),
+          // 'matrixSortAnswerCriteriaWidth'  => $this->getMatrixSortAnswerCriteriaWidth(),
+        ],
+        $this->proFields,
+      ),
+    );
 
     $mapper = new WpProQuiz_Model_QuestionMapper();
     $question = $mapper->save($question);

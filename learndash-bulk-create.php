@@ -19,9 +19,10 @@ if (file_exists(__DIR__ . '/vendor/autoload.php')) {
   require_once __DIR__ . '/vendor/autoload.php';
 }
 
+use League\Csv\Reader;
 use TSTPrep\LDImporter\Data;
+use TSTPrep\LDImporter\Exporter;
 use TSTPrep\LDImporter\Post\Posts;
-use TSTPrep\LDImporter\QuestionConverter;
 
 class Extended_LearnDash_Bulk_Create {
   private $supported_post_types = ['sfwd-courses', 'sfwd-lessons', 'sfwd-topic', 'sfwd-quiz', 'sfwd-question'];
@@ -31,6 +32,7 @@ class Extended_LearnDash_Bulk_Create {
   public function __construct() {
     add_action('admin_menu', [$this, 'add_admin_menu']);
     add_action('admin_init', [$this, 'handle_form_submission']);
+    add_action('wp_ajax_ld_import_gen_template', [$this, 'gen_template']);
     add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_scripts']);
   }
 
@@ -53,7 +55,7 @@ class Extended_LearnDash_Bulk_Create {
       'extended-learndash-bulk-create',
       plugin_dir_url(__FILE__) . 'js/admin.js',
       ['jquery'],
-      null,
+      time(),
       true,
     );
     wp_localize_script('extended-learndash-bulk-create', 'eldbc_ajax', [
@@ -64,6 +66,11 @@ class Extended_LearnDash_Bulk_Create {
 
   public function admin_page() {
     include __DIR__ . '/templates/admin-page.php';
+  }
+
+  public function gen_template() {
+    Exporter::export();
+    die();
   }
 
   public function handle_form_submission() {
@@ -80,37 +87,74 @@ class Extended_LearnDash_Bulk_Create {
 
     $action_type = $_POST['action_type'];
 
-    if (!isset($_FILES['csv_file']) || $_FILES['csv_file']['error'] !== UPLOAD_ERR_OK) {
+    if ($action_type === 'update' && (!isset($_FILES['csv_file']) || $_FILES['csv_file']['error'] !== UPLOAD_ERR_OK)) {
       wp_die(__('CSV file upload failed. Please try again.', 'extended-learndash-bulk-create'));
     }
 
-    if ($action_type === 'update-legacy') {
-      $this->url = (new QuestionConverter())->create($_FILES['csv_file']['tmp_name']);
-      return;
-    } elseif ($action_type === 'update') {
-      $file = fopen($_FILES['csv_file']['tmp_name'], 'r');
-      $headers = fgetcsv($file);
+    if ($action_type === 'delete') {
+      $ids = explode(',', $_POST['quizId']);
+      foreach ($ids as $id) {
+        $id = trim($id);
+        $questions = get_post_meta($id, 'ld_quiz_questions', true);
+        if (is_array($questions)) {
+          $questions = array_keys($questions);
+          foreach ($questions as $q) {
+            wp_delete_post($q, true);
+          }
+          wp_delete_post($id, true);
+        }
+      }
+    } elseif ($action_type === 'update2') {
+      $id = 1437641;
+      $questions = get_post_meta($id, 'ld_quiz_questions', true);
+      if (is_array($questions)) {
+        $questions = array_keys($questions);
+        foreach ($questions as $q) {
+          wp_delete_post($q, true);
+        }
+        wp_delete_post($id, true);
+      }
+
+      $reader = Reader::createFromPath(__DIR__ . '/templates/demo.csv');
+      $reader->setHeaderOffset(0);
+      $records = $reader->getRecords();
 
       $oldPosts = null;
 
-      while (($row = fgetcsv($file)) !== false) {
-        $data = new Data(array_combine($headers, $row));
+      foreach ($records as $record) {
+        $data = new Data($record);
         $posts = new Posts();
         $posts->createOrUpdate($data, $oldPosts);
         $posts->updateMeta($data);
         $oldPosts = $posts;
+        sleep(1);
+      }
+    } elseif ($action_type === 'update') {
+      $id = $_POST['quizId'] ?? 0;
+      $questions = get_post_meta($id, 'ld_quiz_questions', true);
+      if (is_array($questions)) {
+        $questions = array_keys($questions);
+        foreach ($questions as $q) {
+          wp_delete_post($q, true);
+        }
+        wp_delete_post($id, true);
+      }
+
+      $reader = Reader::createFromPath($_FILES['csv_file']['tmp_name']);
+      $reader->setHeaderOffset(0);
+      $records = $reader->getRecords();
+
+      $oldPosts = null;
+
+      foreach ($records as $record) {
+        $data = new Data($record);
+        $posts = new Posts();
+        $posts->createOrUpdate($data, $oldPosts);
+        $posts->updateMeta($data);
+        $oldPosts = $posts;
+        sleep(1);
       }
     }
-
-    // $csv_file = $_FILES['csv_file']['tmp_name'];
-    // $csv_data = array_map('str_getcsv', file($csv_file));
-    // $headers = array_shift($csv_data);
-
-    // if ($action_type === 'create') {
-    //   $this->process_create($content_type, $csv_data, $headers);
-    // } elseif ($action_type === 'update') {
-    //   $this->process_update($content_type, $csv_data, $headers);
-    // }
   }
 
   private function process_create($content_type, $csv_data, $headers) {

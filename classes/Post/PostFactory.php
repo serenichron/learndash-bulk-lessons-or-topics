@@ -25,6 +25,7 @@ class PostFactory {
     'lesson' => Lesson::class,
     'topic' => Topic::class,
     'quiz' => Quiz::class,
+    'question' => Question::class,
   ];
 
   private array $questionClassmap = [
@@ -62,13 +63,11 @@ class PostFactory {
   ];
 
   public function createOrUpdate(string $type, Data $data, Posts $posts): Post {
-    if ($type !== 'question') {
-      $class = $this->classmap[$type];
-      return $class::createOrUpdate($data, $posts);
-    }
-
-    $questionType = $data->questionType();
-    $class = $this->questionClassmap[$questionType] ?? Question::class;
+    $class = $this->classmap[$type];
     return $class::createOrUpdate($data, $posts);
+
+    // $questionType = $data->questionType();
+    // $class = $this->questionClassmap[$questionType] ?? Question::class;
+    // return $class::createOrUpdate($data, $posts);
   }
 }

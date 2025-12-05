@@ -2,36 +2,48 @@
 
 namespace TSTPrep\LDImporter;
 
+use League\Csv\Writer;
+
 class TemplateWriter {
-  private $file;
+  private Writer $writer;
 
   private array $data = [];
 
-  private array $columns = [
-    'group_id',
-    'course_id',
-    'course_post_title',
-    'course_post_content',
-    'lesson_id',
-    'lesson_post_title',
-    'lesson_post_content',
-    'topic_id',
-    'topic_post_title',
-    'topic_post_content',
-    'quiz_id',
-    'quiz_post_title',
-    'quiz_post_content',
-    'question_id',
-    'question_post_title',
-    'question_post_content',
-    'question_type',
-    'question_field_1',
-    'question_field_2',
-  ];
+  private array $columns = [];
 
-  public function __construct(string $path) {
-    $this->file = fopen($path, 'w');
-    fputcsv($this->file, $this->columns);
+  public function __construct(array $includedColumns) {
+    foreach (['group', 'course', 'lesson', 'topic', 'quiz'] as $type) {
+      $included = isset($includedColumns[$type]);
+      if ($included && $includedColumns[$type] === 'full') {
+        $this->columns[] = $type . '_id';
+
+        if ($type !== 'group') {
+          $this->columns[] = $type . '_post_title';
+          $this->columns[] = $type . '_post_content';
+        }
+
+        if ($type === 'quiz') {
+          $this->columns[] = $type . '_affixes';
+        }
+      } elseif ($included || !empty($this->columns)) {
+        $this->columns[] = $type . '_id';
+      }
+    }
+
+    $this->columns[] = 'question_id';
+    $this->columns[] = 'question_post_title';
+    $this->columns[] = 'question_post_content';
+    $this->columns[] = 'question_type';
+    $this->columns[] = 'question_answers';
+    $this->columns[] = 'question_meta';
+    $this->columns[] = 'question_affixes';
+
+    $this->writer = Writer::createFromString('')->setDelimiter(';');
+    $this->writer->insertOne($this->columns);
+  }
+
+  public function group(int|string|null $id = null) {
+    $this->data['group_id'] = $id;
   }
 
   public function course(int|string|null $id = null, ?string $title = null, ?string $content = null) {
@@ -50,6 +62,10 @@ class TemplateWriter {
     $this->set('quiz', $id, $title, $content);
   }
 
+  public function quizAffixes($affixes) {
+    $this->data['quiz_affixes'] = json_encode($affixes);
+  }
+
   public function question(int|string|null $id = null, ?string $title = null, ?string $content = null) {
     $this->set('question', $id, $title, $content);
   }
@@ -58,9 +74,16 @@ class TemplateWriter {
     $this->data['question_type'] = $type;
   }
 
-  public function questionFields(?string $field1 = null, ?string $field2 = null) {
-    $this->data['question_field_1'] = $field1;
-    $this->data['question_field_2'] = $field2;
+  public function questionAnswers($answers) {
+    $this->data['question_answers'] = json_encode($answers);
+  }
+
+  public function questionMeta($meta) {
+    $this->data['question_meta'] = json_encode($meta);
+  }
+
+  public function questionAffixes($affixes) {
+    $this->data['question_affixes'] = json_encode($affixes);
   }
 
   public function set(string $post, int|string|null $id = null, ?string $title = null, ?string $content = null) {
@@ -76,11 +99,12 @@ class TemplateWriter {
       $row[] = $this->data[$key] ?? '';
     }
 
-    fputcsv($this->file, $row);
+    $this->writer->insertOne($row);
     $this->data = [];
   }
 
-  public function __destruct() {
-    fclose($this->file);
+  public function download() {
+    $this->writer->download('f.csv');
+    die();
   }
 }

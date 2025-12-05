@@ -3,6 +3,7 @@
 namespace TSTPrep\LDImporter\Post;
 
 use Exception;
+use TSTPrep\LDAdvancedQuizzes\CarbonFields\QuizAffix;
 use TSTPrep\LDImporter\Data;
 use WpProQuiz_Model_Quiz;
 use WpProQuiz_Model_QuizMapper;
@@ -81,6 +82,18 @@ class Quiz extends Post {
           unset($questions[$questionId]);
           update_post_meta($oldQuizId, 'ld_quiz_questions', $questions);
         }
+      }
+    }
+
+    $affixes = $data->quizAffixes();
+    if (!empty($affixes)) {
+      QuizAffix::saveAffixes($this->id, $affixes);
+    }
+
+    $values = $data->quizMeta();
+    if (!empty($values)) {
+      if (isset($values['quiz_type'])) {
+        update_post_meta($this->id, 'quiz_type', $values['quiz_type']);
       }
     }
   }
