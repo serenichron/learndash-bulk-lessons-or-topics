@@ -32,18 +32,19 @@ class Question extends Post {
     $this->customFields = [$data->questionField(1), $data->questionField(2)];
     $this->correct = $this->customFields[0];
 
-    $this->registered = Questions::getQuestion($this->questionType);
-    $answers = $this->registered->getAnswerFields()->formatAnswers($data->questionAnswers());
-    if (array_is_list($answers)) {
-      $this->answerData = $answers;
-    } else {
-      $this->answerData = $answers['answerData'];
-    }
-
     $this->proFields = array_intersect_key(
       $data->questionProFields(),
       array_flip(['correctSameText', 'correctMsg', 'incorrectMsg', 'answerPointsActivated', 'showPointsInBox']),
     );
+
+    $this->registered = Questions::getQuestion($this->questionType);
+    $answers = $this->registered->getAnswerFields()->formatAnswers($data->questionAnswers());
+    if (array_is_list($answers)) {
+      $this->proFields['answerData'] = $answers;
+    } else {
+      $this->proFields['answerData'] = $answers['answerData'];
+      $this->proFields['points'] = $answers['points'];
+    }
   }
 
   public function create(Posts $posts) {
@@ -125,7 +126,6 @@ class Question extends Post {
           'title' => $this->title,
           'question' => $this->content,
           'answerType' => $this->questionType,
-          'answerData' => $this->answerData,
           // 'points'                         => $this->getPoints(),
           // 'showPointsInBox'                => $this->isShowPointsInBox(),
           // 'answerPointsActivated'          => $this->isAnswerPointsActivated(),
