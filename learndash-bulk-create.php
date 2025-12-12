@@ -121,8 +121,8 @@ class Extended_LearnDash_Bulk_Create {
 
       $oldPosts = null;
 
-      foreach ($records as $record) {
-        $data = new Data($record);
+      foreach ($records as $index => $record) {
+        $data = new Data($record, $index);
         $posts = new Posts();
         $posts->createOrUpdate($data, $oldPosts);
         $posts->updateMeta($data);
@@ -146,8 +146,8 @@ class Extended_LearnDash_Bulk_Create {
 
       $oldPosts = null;
 
-      foreach ($records as $record) {
-        $data = new Data($record);
+      foreach ($records as $index => $record) {
+        $data = new Data($record, $index);
         $posts = new Posts();
         $posts->createOrUpdate($data, $oldPosts);
         $posts->updateMeta($data);

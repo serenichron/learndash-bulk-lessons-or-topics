@@ -13,6 +13,16 @@ class Quiz extends Post {
   protected string $wpType = 'sfwd-quiz';
 
   protected int $proId = 0;
+  protected string $quizType = 'base';
+
+  protected function setProps(Data $data) {
+    parent::setProps($data);
+
+    $meta = $data->quizMeta();
+    if (!empty($meta) && isset($meta['quiz_type'])) {
+      $this->quizType = $meta['quiz_type'];
+    }
+  }
 
   public function create(Posts $posts) {
     parent::create($posts);
@@ -38,6 +48,7 @@ class Quiz extends Post {
   public function prev(Posts $posts) {
     parent::prev($posts);
     $this->proId = intval(get_post_meta($this->id, 'quiz_pro_id', true));
+    $this->quizType = get_post_meta($this->id, 'quiz_type', true) ?: 'base';
   }
 
   public function updateMeta(Data $data, Posts $posts) {
@@ -90,24 +101,45 @@ class Quiz extends Post {
       QuizAffix::saveAffixes($this->id, $affixes);
     }
 
-    $values = $data->quizMeta();
-    if (!empty($values)) {
-      if (isset($values['quiz_type'])) {
-        update_post_meta($this->id, 'quiz_type', $values['quiz_type']);
-      }
-    }
+    // $values = $data->quizMeta();
+    // if (!empty($values)) {
+    //   if (isset($values['quiz_type'])) {
+    //     update_post_meta($this->id, 'quiz_type', $values['quiz_type']);
+    //   }
+    // }
+    update_post_meta($this->id, 'quiz_type', $this->quizType);
   }
 
   protected function savePro(): int {
-    $proQuiz = new WpProQuiz_Model_Quiz([
-      'id' => $this->proId,
-      'name' => $this->title,
-      'showMaxQuestionValue' => 0,
-      'toplistDataAddBlock' => 0,
-      'toplistDataShowLimit' => 0,
-      'quizModus' => 2,
-      'autostart' => true,
-    ]);
+    $proFields = [];
+    switch ($this->quizType) {
+      case 'reading':
+      case 'writing':
+      case 'listening':
+      case 'speaking':
+        $proFields = [
+          'hideResultCorrectQuestion' => true,
+          'hideResultQuizTime' => true,
+        ];
+        break;
+      case 'base':
+        break;
+    }
+
+    $proQuiz = new WpProQuiz_Model_Quiz(
+      array_merge(
+        [
+          'id' => $this->proId,
+          'name' => $this->title,
+          'showMaxQuestionValue' => 0,
+          'toplistDataAddBlock' => 0,
+          'toplistDataShowLimit' => 0,
+          'quizModus' => 2,
+          'autostart' => true,
+        ],
+        $proFields,
+      ),
+    );
 
     $mapper = new WpProQuiz_Model_QuizMapper();
     $proQuiz = $mapper->save($proQuiz);

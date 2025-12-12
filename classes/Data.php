@@ -6,9 +6,11 @@ use Exception;
 
 class Data {
   private array $data;
+  private $index;
 
-  public function __construct(array $data) {
+  public function __construct(array $data, $index) {
     $this->data = $data;
+    $this->index = $index;
   }
 
   public function id(string $type, bool $includeSpecial = true): string|int|null {
@@ -87,6 +89,11 @@ class Data {
     $answers = $this->getValue($key);
     if ($answers !== null) {
       $answers = json_decode($answers, true);
+
+      if ($answers === null) {
+        error_log('[IMPORT] Error decoding row ' . $this->index . ', column ' . $key);
+        error_log('[IMPORT] ' . json_last_error_msg());
+      }
     }
 
     return $answers;
