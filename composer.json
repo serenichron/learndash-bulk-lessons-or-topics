@@ -2,7 +2,7 @@
   "name": "serenichron/learndash-bulk-lessons-or-topics",
   "description": "A WordPress plugin to bulk create LearnDash courses, lessons, and topics using CSV files.",
   "type": "wordpress-plugin",
-  "version": "1.1.5",
+  "version": "1.2.0",
   "license": "GPL-3.0-or-later",
   "authors": [
     {
