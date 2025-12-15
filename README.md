@@ -114,5 +114,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 ## Changelog
 
+### 1.2.1
+- Add AGENTS.md contributor guide with repository workflow notes.
+
 ### 1.0.0
 - Initial release
