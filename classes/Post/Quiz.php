@@ -14,6 +14,7 @@ class Quiz extends Post {
 
   protected int $proId = 0;
   protected string $quizType = 'base';
+  protected $proFields = [];
 
   protected function setProps(Data $data) {
     parent::setProps($data);
@@ -22,6 +23,11 @@ class Quiz extends Post {
     if (!empty($meta) && isset($meta['quiz_type'])) {
       $this->quizType = $meta['quiz_type'];
     }
+
+    $this->proFields = array_intersect_key(
+      $data->questionProFields(),
+      array_flip(['quizModus', 'showReviewQuestion', 'hideResultCorrectQuestion', 'hideResultQuizTime']),
+    );
   }
 
   public function create(Posts $posts) {
@@ -111,18 +117,28 @@ class Quiz extends Post {
   }
 
   protected function savePro(): int {
-    $proFields = [];
     switch ($this->quizType) {
       case 'reading':
       case 'writing':
       case 'listening':
       case 'speaking':
-        $proFields = [
-          'hideResultCorrectQuestion' => true,
-          'hideResultQuizTime' => true,
-        ];
+        $this->proFields = array_merge(
+          [
+            'hideResultCorrectQuestion' => true,
+            'hideResultQuizTime' => true,
+            'showReviewQuestion' => true,
+            'quizModus' => 2,
+          ],
+          $this->proFields,
+        );
         break;
       case 'base':
+        $this->proFields = array_merge(
+          [
+            'quizModus' => 2,
+          ],
+          $this->proFields,
+        );
         break;
     }
 
@@ -134,10 +150,9 @@ class Quiz extends Post {
           'showMaxQuestionValue' => 0,
           'toplistDataAddBlock' => 0,
           'toplistDataShowLimit' => 0,
-          'quizModus' => 2,
           'autostart' => true,
         ],
-        $proFields,
+        $this->proFields,
       ),
     );
 
