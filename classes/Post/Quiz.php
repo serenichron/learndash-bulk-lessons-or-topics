@@ -25,7 +25,7 @@ class Quiz extends Post {
     }
 
     $this->proFields = array_intersect_key(
-      $data->questionProFields(),
+      $data->quizProFields(),
       array_flip(['quizModus', 'showReviewQuestion', 'hideResultCorrectQuestion', 'hideResultQuizTime']),
     );
   }
