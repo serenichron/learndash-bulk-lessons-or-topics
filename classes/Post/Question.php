@@ -1,6 +1,6 @@
 <?php
 
-namespace TSTPrep\LDImporter\Post\Question;
+namespace TSTPrep\LDImporter\Post;
 
 use Exception;
 use TSTPrep\LDAdvancedQuizzes\CarbonFields\QuestionAffix;
@@ -17,11 +17,9 @@ class Question extends Post {
   protected string $wpType = 'sfwd-question';
 
   protected string $questionType = '';
-  protected array $customFields = [];
 
   protected int $quizQuestionId = 0;
   protected int $correctSameAsText = 0;
-  protected $correct = '';
   protected $answerData = [];
   protected $proFields = [];
   protected RegisteredQuestion $registered;
@@ -29,8 +27,6 @@ class Question extends Post {
   protected function setProps(Data $data) {
     parent::setProps($data);
     $this->questionType = $data->questionType() ?? '';
-    $this->customFields = [$data->questionField(1), $data->questionField(2)];
-    $this->correct = $this->customFields[0];
 
     $this->proFields = array_intersect_key(
       $data->questionProFields(),

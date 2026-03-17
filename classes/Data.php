@@ -71,10 +71,6 @@ class Data {
     return $this->getJsonValue('question_affixes');
   }
 
-  public function questionField(int $number): ?string {
-    return $this->getValue('question_field_' . $number);
-  }
-
   private function getValue(string $key) {
     $value = $this->data[$key] ?? '';
     if (!is_string($value)) {
