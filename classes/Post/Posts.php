@@ -24,23 +24,23 @@ class Posts {
   }
 
   public function updateMeta(Data $data) {
-    if ($this->course->exists()) {
+    if ($this->course->exists() && !$this->course->isPrev()) {
       $this->course->updateMeta($data, $this);
     }
 
-    if ($this->lesson->exists()) {
+    if ($this->lesson->exists() && !$this->lesson->isPrev()) {
       $this->lesson->updateMeta($data, $this);
     }
 
-    if ($this->topic->exists()) {
+    if ($this->topic->exists() && !$this->topic->isPrev()) {
       $this->topic->updateMeta($data, $this);
     }
 
-    if ($this->quiz->exists()) {
+    if ($this->quiz->exists() && !$this->quiz->isPrev()) {
       $this->quiz->updateMeta($data, $this);
     }
 
-    if ($this->question->exists()) {
+    if ($this->question->exists() && !$this->question->isPrev()) {
       $this->question->updateMeta($data, $this);
     }
   }

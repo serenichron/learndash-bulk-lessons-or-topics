@@ -11,6 +11,7 @@ abstract class Post {
   protected ?string $content;
   protected string $type;
   protected string $wpType;
+  protected bool $isPrev = false;
 
   public function __construct(?int $id = null, ?string $title = null, ?string $content = null) {
     $this->id = $id;
@@ -94,6 +95,7 @@ abstract class Post {
   public function prev(Posts $posts) {
     $id = $posts->prev?->{$this->type}?->id;
     $this->id = $id;
+    $this->isPrev = true;
   }
 
   protected function setProps(Data $data) {
@@ -105,5 +107,9 @@ abstract class Post {
 
   public function exists(): bool {
     return $this->id !== null;
+  }
+
+  public function isPrev(): bool {
+    return $this->isPrev;
   }
 }
