@@ -92,10 +92,10 @@ class Question extends Post {
 
       if (($questions[$this->id] ?? null) !== $this->quizQuestionId) {
         $questions[$this->id] = $this->quizQuestionId;
-        update_post_meta($this->id, 'ld_quiz_questions', $questions);
+        update_post_meta($posts->quiz->id, 'ld_quiz_questions', $questions);
       }
 
-      if ($oldQuizId && $oldQuizId !== $this->id) {
+      if ($oldQuizId && intval($oldQuizId) !== $posts->quiz->id) {
         $questions = get_post_meta($oldQuizId, 'ld_quiz_questions', true);
 
         if (is_array($questions) && isset($questions[$this->id])) {
