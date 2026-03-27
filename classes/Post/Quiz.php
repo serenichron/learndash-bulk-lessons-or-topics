@@ -76,33 +76,6 @@ class Quiz extends Post {
       }
     }
 
-    if ($posts->question?->exists()) {
-      $questionId = $posts->question->id;
-      $questionProId = $posts->question->getProId();
-
-      if ($questionProId) {
-        $questions = get_post_meta($this->id, 'ld_quiz_questions', true);
-        if (!is_array($questions)) {
-          $questions = [];
-        }
-
-        if (($questions[$questionId] ?? null) !== $questionProId) {
-          $questions[$questionId] = $questionProId;
-          update_post_meta($this->id, 'ld_quiz_questions', $questions);
-        }
-      }
-
-      $oldQuizId = get_post_meta($questionId, 'quiz_id', true);
-      if ($oldQuizId && $oldQuizId !== $this->id) {
-        $questions = get_post_meta($oldQuizId, 'ld_quiz_questions', true);
-
-        if (is_array($questions) && isset($questions[$questionId])) {
-          unset($questions[$questionId]);
-          update_post_meta($oldQuizId, 'ld_quiz_questions', $questions);
-        }
-      }
-    }
-
     $affixes = $data->quizAffixes();
     if (!empty($affixes)) {
       QuizAffix::saveAffixes($this->id, $affixes);

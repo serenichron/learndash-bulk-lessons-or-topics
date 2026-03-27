@@ -69,6 +69,8 @@ class Question extends Post {
     update_post_meta($this->id, 'question_type', $this->questionType);
 
     if ($posts->quiz?->exists()) {
+      $oldQuizId = get_post_meta($this->id, 'quiz_id', true);
+
       update_post_meta($this->id, 'quiz_id', $posts->quiz->id);
       update_post_meta($this->id, 'ld_quiz_id', $posts->quiz->getProId());
       update_post_meta($this->id, '_sfwd-question', ['sfwd-question_quiz' => (string) $posts->quiz->id]);
@@ -84,6 +86,22 @@ class Question extends Post {
         remove_action('post_updated', 'wp_save_post_revision');
         wp_update_post(['ID' => $this->id, 'menu_order' => $index]);
         add_action('post_updated', 'wp_save_post_revision');
+      } else {
+        $questions = [];
+      }
+
+      if (($questions[$this->id] ?? null) !== $this->quizQuestionId) {
+        $questions[$this->id] = $this->quizQuestionId;
+        update_post_meta($this->id, 'ld_quiz_questions', $questions);
+      }
+
+      if ($oldQuizId && $oldQuizId !== $this->id) {
+        $questions = get_post_meta($oldQuizId, 'ld_quiz_questions', true);
+
+        if (is_array($questions) && isset($questions[$this->id])) {
+          unset($questions[$this->id]);
+          update_post_meta($oldQuizId, 'ld_quiz_questions', $questions);
+        }
       }
     }
 
