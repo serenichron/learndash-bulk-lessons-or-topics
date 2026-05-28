@@ -33,7 +33,11 @@ class Question extends Post {
       array_flip(['correctSameText', 'correctMsg', 'incorrectMsg', 'answerPointsActivated', 'showPointsInBox']),
     );
 
-    $this->registered = Questions::getQuestion($this->questionType);
+    $registered = Questions::getQuestion($this->questionType);
+    if (!$registered) {
+      throw new Exception('Question type "' . $this->questionType . '" does not exist.');
+    }
+    $this->registered = $registered;
     $answers = $this->registered->getAnswerFields()->formatAnswers($data->questionAnswers());
     if (array_is_list($answers)) {
       $this->proFields['answerData'] = $answers;

@@ -9,6 +9,16 @@ $types = ['quiz'];
 
 <div class="wrap">
   <h1><?php _e('Extended LearnDash Bulk Create and Update', 'extended-learndash-bulk-create'); ?></h1>
+
+  <?php if (!empty($this->errorMessages)): ?>
+    <div style="color: red;">
+      <h2>ERROR</h2>
+      <?php foreach ($this->errorMessages as $e): ?>
+        <p><?= $e ?></p>
+      <?php endforeach; ?>
+    </div>
+  <?php endif; ?>
+
   <form method="post" enctype="multipart/form-data">
     <?php wp_nonce_field('extended_learndash_bulk_create', 'extended_learndash_bulk_create_nonce'); ?>
     <table class="form-table">

@@ -27,6 +27,7 @@ use TSTPrep\LDImporter\Post\Posts;
 class Extended_LearnDash_Bulk_Create {
   private $supported_post_types = ['sfwd-courses', 'sfwd-lessons', 'sfwd-topic', 'sfwd-quiz', 'sfwd-question'];
   private $changes = [];
+  public $errorMessages = [];
   public $url = '';
 
   public function __construct() {
@@ -75,6 +76,7 @@ class Extended_LearnDash_Bulk_Create {
 
   public function handle_form_submission() {
     if (
+      !isset($_POST['extended_learndash_bulk_create_nonce']) ||
       !isset($_POST['submit']) ||
       !check_admin_referer('extended_learndash_bulk_create', 'extended_learndash_bulk_create_nonce')
     ) {
@@ -105,7 +107,7 @@ class Extended_LearnDash_Bulk_Create {
         }
       }
     } elseif ($action_type === 'update2') {
-      $id = 1437641;
+      $id = 0;
       $questions = get_post_meta($id, 'ld_quiz_questions', true);
       if (is_array($questions)) {
         $questions = array_keys($questions);
@@ -122,7 +124,7 @@ class Extended_LearnDash_Bulk_Create {
       $oldPosts = null;
 
       foreach ($records as $index => $record) {
-        $data = new Data($record, $index);
+        $data = new Data($record, $index, $this);
         $posts = new Posts();
         $posts->createOrUpdate($data, $oldPosts);
         $posts->updateMeta($data);
@@ -140,19 +142,24 @@ class Extended_LearnDash_Bulk_Create {
         wp_delete_post($id, true);
       }
 
-      $reader = Reader::createFromPath($_FILES['csv_file']['tmp_name']);
-      $reader->setHeaderOffset(0);
-      $records = $reader->getRecords();
+      try {
+        $reader = Reader::createFromPath($_FILES['csv_file']['tmp_name']);
+        $reader->setHeaderOffset(0);
+        $records = $reader->getRecords();
 
-      $oldPosts = null;
+        $oldPosts = null;
 
-      foreach ($records as $index => $record) {
-        $data = new Data($record, $index);
-        $posts = new Posts();
-        $posts->createOrUpdate($data, $oldPosts);
-        $posts->updateMeta($data);
-        $oldPosts = $posts;
-        sleep(1);
+        foreach ($records as $index => $record) {
+          $data = new Data($record, $index, $this);
+          $posts = new Posts();
+          $posts->createOrUpdate($data, $oldPosts);
+          $posts->updateMeta($data);
+          $oldPosts = $posts;
+          sleep(1);
+        }
+      } catch (Exception $e) {
+        error_log($e);
+        $this->errorMessages[] = $e->getMessage();
       }
     }
   }

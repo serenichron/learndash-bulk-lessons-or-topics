@@ -3,14 +3,17 @@
 namespace TSTPrep\LDImporter;
 
 use Exception;
+use Extended_LearnDash_Bulk_Create;
 
 class Data {
+  private Extended_LearnDash_Bulk_Create $plugin;
   private array $data;
   private $index;
 
-  public function __construct(array $data, $index) {
+  public function __construct(array $data, $index, Extended_LearnDash_Bulk_Create $plugin) {
     $this->data = $data;
     $this->index = $index;
+    $this->plugin = $plugin;
   }
 
   public function id(string $type, bool $includeSpecial = true): string|int|null {
@@ -71,6 +74,10 @@ class Data {
     return $this->getJsonValue('question_affixes');
   }
 
+  public function dump() {
+    error_log('[IMPORT] [DUMP] ' . var_export($this->data, true));
+  }
+
   private function getValue(string $key) {
     $value = $this->data[$key] ?? '';
     if (!is_string($value)) {
@@ -91,8 +98,11 @@ class Data {
       $answers = json_decode($answers, true);
 
       if ($answers === null) {
-        error_log('[IMPORT] Error decoding row ' . $this->index . ', column ' . $key);
-        error_log('[IMPORT] ' . json_last_error_msg());
+        $m1 = 'Error decoding row ' . $this->index . ', column ' . $key;
+        $m2 = json_last_error_msg();
+        error_log('[IMPORT] ' . $m1);
+        error_log('[IMPORT] ' . $m2);
+        $this->plugin->errorMessages[] = $m1 . '. ' . $m2;
       }
     }
 
