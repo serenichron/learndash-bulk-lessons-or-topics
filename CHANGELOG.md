@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.6] - 2026-06-08
+
+### Added
+- Nonce check on form submission for CSRF protection (`extended_learndash_bulk_create_nonce`)
+- Error message display in admin UI when import fails
+- `Extended_LearnDash_Bulk_Create` error message collector for user-facing error feedback
+- `dump()` method on `Data` class for debug logging
+
+### Fixed
+- Question type validation: throws explicit error when question type does not exist instead of silently failing
+- Exception handling in CSV upload: wraps the entire import process in try/catch with user-facing error reporting
+
 ## [1.2.5] - 2026-03-27
 
 ### Fixed
