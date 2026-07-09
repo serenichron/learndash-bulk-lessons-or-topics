@@ -4,6 +4,7 @@ namespace TSTPrep\LDImporter\Post;
 
 use Exception;
 use TSTPrep\LDImporter\Data;
+use WP_Post;
 
 abstract class Post {
   protected ?int $id;
@@ -42,6 +43,13 @@ abstract class Post {
       return $post;
     }
 
+    $existing = $post->getExistingPost($id);
+    if ($existing === null) {
+      $post->create($posts);
+      $data->setId($post->type, $post->id);
+      return $post;
+    }
+
     $post->id = $id;
     $post->update($posts);
 
@@ -68,6 +76,13 @@ abstract class Post {
   }
 
   public function update(Posts $posts) {
+    $existing = $this->getExistingPost($this->id);
+    if ($existing === null) {
+      throw new Exception(
+        sprintf(__('Cannot update %s: post %d does not exist.', 'extended-learndash-bulk-create'), $this->type, $this->id),
+      );
+    }
+
     $args = [
       'ID' => $this->id,
     ];
@@ -101,6 +116,31 @@ abstract class Post {
   protected function setProps(Data $data) {
     $this->title = $data->title($this->type);
     $this->content = $data->content($this->type);
+  }
+
+  protected function getExistingPost(?int $id): ?WP_Post {
+    if ($id === null) {
+      return null;
+    }
+
+    $post = get_post($id);
+    if ($post === null) {
+      return null;
+    }
+
+    if ($post->post_type !== $this->wpType) {
+      throw new Exception(
+        sprintf(
+          __('Invalid %1$s post ID %2$d: expected %3$s, got %4$s.', 'extended-learndash-bulk-create'),
+          $this->type,
+          $id,
+          $this->wpType,
+          $post->post_type,
+        ),
+      );
+    }
+
+    return $post;
   }
 
   abstract public function updateMeta(Data $data, Posts $posts);
