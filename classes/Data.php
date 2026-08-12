@@ -135,4 +135,23 @@ class Data {
   public function setId(string $type, ?int $id) {
     $this->data[$type . '_id'] = $id;
   }
+
+  /**
+   * What each level of this row ended up pointing at, once the row has run.
+   *
+   * CREATE and PREV are replaced with real ids along the way, so this is what
+   * the spreadsheet writes back into its own id cells.
+   *
+   * @return array<string, ?int>
+   */
+  public function resolvedIds(): array {
+    $ids = [];
+
+    foreach (['group', 'course', 'lesson', 'topic', 'quiz', 'question'] as $type) {
+      $value = $this->data[$type . '_id'] ?? null;
+      $ids[$type] = is_numeric($value) ? (int) $value : null;
+    }
+
+    return $ids;
+  }
 }

@@ -20,15 +20,14 @@ if (file_exists(__DIR__ . '/vendor/autoload.php')) {
 }
 
 use League\Csv\Reader;
-use TSTPrep\LDImporter\Data;
 use TSTPrep\LDImporter\Exporter;
-use TSTPrep\LDImporter\ImportContext;
-use TSTPrep\LDImporter\Post\Posts;
+use TSTPrep\LDImporter\Importer;
 
 class Extended_LearnDash_Bulk_Create {
   private $supported_post_types = ['sfwd-courses', 'sfwd-lessons', 'sfwd-topic', 'sfwd-quiz', 'sfwd-question'];
   private $changes = [];
   public $errorMessages = [];
+  public $notices = [];
 
   public function __construct() {
     add_action('admin_menu', [$this, 'add_admin_menu']);
@@ -102,64 +101,114 @@ class Extended_LearnDash_Bulk_Create {
       return;
     }
 
+    $checkOnly = !empty($_POST['check_only']);
+
     try {
       // Read the whole file before anything on the site is touched. The
       // delete below used to run first, so a file that failed to parse cost
       // you the quiz and gave you nothing back.
       $reader = Reader::createFromPath($_FILES['csv_file']['tmp_name']);
       $reader->setHeaderOffset(0);
-      $records = iterator_to_array($reader->getRecords());
-
-      $this->delete_quizzes(explode(',', (string) ($_POST['quizId'] ?? '')));
-
-      $context = new ImportContext();
-      $this->run_import($records, $context);
-
-      foreach ($context->errors() as $error) {
-        $this->errorMessages[] = $this->format_error($error);
-      }
+      $rows = $this->label_rows($reader->getRecords());
     } catch (Exception $e) {
       error_log($e);
       $this->errorMessages[] = $e->getMessage();
+      return;
     }
+
+    $importer = new Importer();
+
+    if ($checkOnly) {
+      $this->report($importer->check($rows), true);
+      return;
+    }
+
+    // The check inside push() runs before anything is written, so a sheet
+    // with a problem in it never gets as far as this delete.
+    $preview = $importer->check($rows);
+    if (!$preview['ok']) {
+      $this->report($preview, true);
+      return;
+    }
+
+    $this->delete_quizzes(explode(',', (string) ($_POST['quizId'] ?? '')));
+
+    $this->report($importer->push($rows, !empty($_POST['detach_missing'])), false);
   }
 
   /**
-   * Walk the rows and build the content.
-   *
-   * There is deliberately no pause between rows. Order now comes from the
-   * position written onto each question, not from the creation timestamp.
+   * Key the rows by the row number the user sees in their file.
+   * The header sits at reader offset 0, so the first row of data is row 2.
    *
    * @param iterable<mixed, array<string, mixed>> $records
+   * @return array<int|string, array<string, mixed>>
    */
-  private function run_import(iterable $records, ImportContext $context): void {
-    $oldPosts = null;
+  private function label_rows(iterable $records): array {
+    $rows = [];
 
     foreach ($records as $index => $record) {
-      $data = new Data($record, $this->row_label($index), $context);
-      $posts = new Posts();
-      $posts->createOrUpdate($data, $oldPosts);
-      $posts->updateMeta($data);
-      $oldPosts = $posts;
+      $label = is_int($index) ? $index + 1 : $index;
+      $rows[$label] = $record;
     }
+
+    return $rows;
   }
 
-  /**
-   * Turn a reader offset into the row number the user sees in their sheet.
-   * The header sits at offset 0, so the first row of data is row 2.
-   */
-  private function row_label($index) {
-    return is_int($index) ? $index + 1 : $index;
+  private function report(array $report, bool $checkOnly): void {
+    foreach ($report['problems'] as $problem) {
+      $this->errorMessages[] = $this->format_error($problem);
+    }
+
+    foreach ($report['warnings'] as $warning) {
+      $this->notices[] = $this->format_error($warning);
+    }
+
+    $summary = $report['summary'];
+
+    if (!$report['ok']) {
+      $this->notices[] = $report['written']
+        ? __('The import stopped part way. Nothing below the failed row was written.', 'extended-learndash-bulk-create')
+        : __('Nothing was written. Fix the problems above and try again.', 'extended-learndash-bulk-create');
+      return;
+    }
+
+    if ($checkOnly) {
+      $this->notices[] = sprintf(
+        __(
+          'Checked %1$d rows and found no problems. This would make %2$d quizzes and %3$d questions, and update %4$d quizzes and %5$d questions.',
+          'extended-learndash-bulk-create',
+        ),
+        $summary['rows'],
+        $summary['quizzes_new'],
+        $summary['questions_new'],
+        $summary['quizzes_existing'],
+        $summary['questions_existing'],
+      );
+      return;
+    }
+
+    $this->notices[] = sprintf(
+      __(
+        'Done. %1$d rows processed. Made %2$d quizzes and %3$d questions, updated %4$d quizzes and %5$d questions, took %6$d questions out of their quiz.',
+        'extended-learndash-bulk-create',
+      ),
+      $summary['rows'],
+      $summary['quizzes_new'],
+      $summary['questions_new'],
+      $summary['quizzes_existing'],
+      $summary['questions_existing'],
+      $summary['questions_detached'] ?? 0,
+    );
   }
 
   private function format_error(array $error): string {
     $where = [];
 
-    if ($error['row'] !== null) {
+    if (($error['row'] ?? null) !== null) {
       $where[] = sprintf(__('row %s', 'extended-learndash-bulk-create'), $error['row']);
     }
 
-    if ($error['column'] !== null) {
+    if (($error['column'] ?? null) !== null) {
       $where[] = sprintf(__('column %s', 'extended-learndash-bulk-create'), $error['column']);
     }
 

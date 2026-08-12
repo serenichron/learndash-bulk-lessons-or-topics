@@ -11,11 +11,23 @@ $types = ['quiz'];
   <h1><?php _e('Extended LearnDash Bulk Create and Update', 'extended-learndash-bulk-create'); ?></h1>
 
   <?php if (!empty($this->errorMessages)): ?>
-    <div style="color: red;">
-      <h2>ERROR</h2>
-      <?php foreach ($this->errorMessages as $e): ?>
-        <p><?= esc_html($e) ?></p>
-      <?php endforeach; ?>
+    <div class="notice notice-error">
+      <p><strong><?php _e('Problems found', 'extended-learndash-bulk-create'); ?></strong></p>
+      <ul style="list-style: disc; margin-left: 2em;">
+        <?php foreach ($this->errorMessages as $e): ?>
+          <li><?= esc_html($e) ?></li>
+        <?php endforeach; ?>
+      </ul>
+    </div>
+  <?php endif; ?>
+
+  <?php if (!empty($this->notices)): ?>
+    <div class="notice notice-info">
+      <ul style="list-style: disc; margin-left: 2em;">
+        <?php foreach ($this->notices as $n): ?>
+          <li><?= esc_html($n) ?></li>
+        <?php endforeach; ?>
+      </ul>
     </div>
   <?php endif; ?>
 
@@ -64,6 +76,26 @@ $types = ['quiz'];
           'extended-learndash-bulk-create',
         ); ?></label></th>
         <td><input type="file" name="csv_file" id="csv_file" accept=".csv" required></td>
+      </tr>
+      <tr>
+        <th scope="row"><?php _e('Options', 'extended-learndash-bulk-create'); ?></th>
+        <td>
+          <p>
+            <label>
+              <input type="checkbox" name="check_only" value="1">
+              <?php _e('Check only. Report what would happen and write nothing.', 'extended-learndash-bulk-create'); ?>
+            </label>
+          </p>
+          <p>
+            <label>
+              <input type="checkbox" name="detach_missing" value="1">
+              <?php _e(
+                'Take questions out of a quiz when the file no longer lists them. The questions stay in WordPress.',
+                'extended-learndash-bulk-create',
+              ); ?>
+            </label>
+          </p>
+        </td>
       </tr>
     </table>
     <p class="submit">
