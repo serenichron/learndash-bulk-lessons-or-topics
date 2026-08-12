@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top" />
+    <style>
+      body {
+        font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+        font-size: 13px;
+        line-height: 1.5;
+        color: #202124;
+        margin: 0;
+        padding: 16px 18px 20px;
+      }
+      .banner {
+        border-radius: 6px;
+        padding: 12px 14px;
+        margin-bottom: 14px;
+      }
+      .good {
+        background: #e6f4ea;
+        color: #137333;
+      }
+      .bad {
+        background: #fce8e6;
+        color: #a50e0e;
+      }
+      .banner strong {
+        display: block;
+        font-size: 14px;
+        margin-bottom: 2px;
+      }
+      h2 {
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #5f6368;
+        margin: 18px 0 6px;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+      }
+      td,
+      th {
+        text-align: left;
+        padding: 5px 8px 5px 0;
+        vertical-align: top;
+        border-bottom: 1px solid #f1f3f4;
+      }
+      th {
+        color: #5f6368;
+        font-weight: 500;
+        white-space: nowrap;
+      }
+      .where {
+        white-space: nowrap;
+        font-variant-numeric: tabular-nums;
+        color: #5f6368;
+        width: 1%;
+        padding-right: 14px;
+      }
+      .counts {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px 10px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+      .counts li {
+        background: #f1f3f4;
+        border-radius: 12px;
+        padding: 3px 10px;
+      }
+      .meta {
+        color: #5f6368;
+        font-size: 12px;
+        margin-top: 18px;
+        border-top: 1px solid #f1f3f4;
+        padding-top: 10px;
+      }
+      code {
+        font-family: monospace;
+        background: #f1f3f4;
+        padding: 1px 4px;
+        border-radius: 3px;
+      }
+    </style>
+  </head>
+  <body>
+    <? var s = report.summary || {}; ?>
+    <? var problems = report.problems || []; ?>
+    <? var warnings = report.warnings || []; ?>
+
+    <? if (report.ok) { ?>
+    <div class="banner good">
+      <strong><?= wrote ? 'Done' : 'Nothing wrong with this sheet' ?></strong>
+      <?= wrote
+        ? 'Your sheet is on ' + cfg.host + '.' + (written ? ' ' + written + ' id cells were filled in for you.' : '')
+        : 'Checked ' + (s.rows || 0) + ' rows and found no problems. Nothing was written.' ?>
+    </div>
+    <? } else { ?>
+    <div class="banner bad">
+      <strong><?= report.written ? 'Stopped part way' : 'Not sent' ?></strong>
+      <?= report.written
+        ? 'Something failed while writing. Rows below the failure did not go in.'
+        : 'Nothing was written. Fix the rows below and try again.' ?>
+    </div>
+    <? } ?>
+
+    <? if (problems.length) { ?>
+    <h2>Problems (<?= problems.length ?>)</h2>
+    <table>
+      <? for (var i = 0; i < problems.length; i++) { var p = problems[i]; ?>
+      <tr>
+        <td class="where">
+          <?= p.row ? 'Row ' + p.row : '' ?><?= p.row && p.column ? ', ' : '' ?><?= p.column ? p.column : '' ?>
+        </td>
+        <td><?= p.message ?></td>
+      </tr>
+      <? } ?>
+    </table>
+    <? } ?>
+
+    <? if (warnings.length) { ?>
+    <h2>Worth knowing (<?= warnings.length ?>)</h2>
+    <table>
+      <? for (var i = 0; i < warnings.length; i++) { ?>
+      <tr>
+        <td><?= warnings[i].message ?></td>
+      </tr>
+      <? } ?>
+    </table>
+    <? } ?>
+
+    <h2><?= report.ok && wrote ? 'What happened' : 'What this sheet would do' ?></h2>
+    <ul class="counts">
+      <li><?= s.rows || 0 ?> rows</li>
+      <li><?= s.quizzes_new || 0 ?> new quizzes</li>
+      <li><?= s.questions_new || 0 ?> new questions</li>
+      <li><?= s.quizzes_existing || 0 ?> quizzes updated</li>
+      <li><?= s.questions_existing || 0 ?> questions updated</li>
+      <? if (s.questions_detached) { ?>
+      <li><?= s.questions_detached ?> questions taken out of a quiz</li>
+      <? } ?>
+    </ul>
+
+    <? if (report.stoppedAtChunk) { ?>
+    <p class="meta">
+      This sheet was sent in <?= report.totalChunks ?> pieces and stopped at piece <?= report.stoppedAtChunk ?>.
+      Everything before that went in.
+    </p>
+    <? } ?>
+
+    <p class="meta">
+      Sheet <code><?= sheetName ?></code> &middot; <?= cfg.profile ?> &middot; <?= cfg.host ?>
+    </p>
+  </body>
+</html>

@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top" />
+    <style>
+      body {
+        font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+        font-size: 13px;
+        line-height: 1.5;
+        color: #202124;
+        margin: 0;
+        padding: 16px 18px 20px;
+      }
+      h2 {
+        font-size: 14px;
+        margin: 20px 0 8px;
+      }
+      h2:first-of-type {
+        margin-top: 8px;
+      }
+      label {
+        display: block;
+        margin: 10px 0 3px;
+        color: #5f6368;
+      }
+      input[type='text'],
+      input[type='password'] {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 6px 8px;
+        border: 1px solid #dadce0;
+        border-radius: 4px;
+        font-size: 13px;
+        font-family: inherit;
+      }
+      input[type='password'] {
+        font-family: monospace;
+      }
+      fieldset {
+        border: 1px solid #dadce0;
+        border-radius: 6px;
+        padding: 4px 14px 14px;
+        margin: 0 0 14px;
+      }
+      legend {
+        padding: 0 6px;
+        font-weight: 600;
+      }
+      .row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 12px 0;
+      }
+      .note {
+        color: #5f6368;
+        font-size: 12px;
+        margin: 4px 0 0;
+      }
+      .has-key {
+        color: #137333;
+      }
+      .no-key {
+        color: #a50e0e;
+      }
+      .actions {
+        margin-top: 18px;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      button {
+        font-family: inherit;
+        font-size: 13px;
+        padding: 7px 16px;
+        border-radius: 4px;
+        border: 1px solid #dadce0;
+        background: #fff;
+        cursor: pointer;
+      }
+      button.primary {
+        background: #1a73e8;
+        border-color: #1a73e8;
+        color: #fff;
+      }
+      button.link {
+        border: none;
+        background: none;
+        color: #1a73e8;
+        padding: 2px 0;
+        text-decoration: underline;
+      }
+      #status {
+        color: #137333;
+      }
+    </style>
+  </head>
+  <body>
+    <fieldset>
+      <legend>Which site am I pushing to</legend>
+      <div class="row">
+        <input
+          type="radio"
+          name="profile"
+          id="p-staging"
+          value="staging"
+          <?= saved.profile === 'staging' ? 'checked' : '' ?>
+        />
+        <label for="p-staging" style="margin: 0">Staging</label>
+      </div>
+      <div class="row">
+        <input type="radio" name="profile" id="p-live" value="live" <?= saved.profile === 'live' ? 'checked' : '' ?> />
+        <label for="p-live" style="margin: 0">Live</label>
+      </div>
+      <p class="note">The menu always shows which one is selected, so a push to the wrong site takes real effort.</p>
+    </fieldset>
+
+    <fieldset>
+      <legend>Staging</legend>
+      <label for="stagingUrl">Address</label>
+      <input type="text" id="stagingUrl" value="<?= saved.staging.url ?>" placeholder="https://staging3.tstprep.com" />
+      <label for="stagingKey">
+        Key
+        <span class="<?= saved.staging.hasKey ? 'has-key' : 'no-key' ?>">
+          <?= saved.staging.hasKey ? '(one is saved)' : '(none saved yet)' ?>
+        </span>
+      </label>
+      <input type="password" id="stagingKey" placeholder="<?= saved.staging.hasKey ? 'Leave blank to keep it' : 'ldbc_...' ?>" />
+      <? if (saved.staging.hasKey) { ?>
+      <button class="link" type="button" onclick="forget('staging')">Forget the staging key</button>
+      <? } ?>
+    </fieldset>
+
+    <fieldset>
+      <legend>Live</legend>
+      <label for="liveUrl">Address</label>
+      <input type="text" id="liveUrl" value="<?= saved.live.url ?>" placeholder="https://tstprep.com" />
+      <label for="liveKey">
+        Key
+        <span class="<?= saved.live.hasKey ? 'has-key' : 'no-key' ?>">
+          <?= saved.live.hasKey ? '(one is saved)' : '(none saved yet)' ?>
+        </span>
+      </label>
+      <input type="password" id="liveKey" placeholder="<?= saved.live.hasKey ? 'Leave blank to keep it' : 'ldbc_...' ?>" />
+      <? if (saved.live.hasKey) { ?>
+      <button class="link" type="button" onclick="forget('live')">Forget the live key</button>
+      <? } ?>
+    </fieldset>
+
+    <div class="row">
+      <input type="checkbox" id="detachMissing" <?= saved.detachMissing ? 'checked' : '' ?> />
+      <label for="detachMissing" style="margin: 0">Keep quizzes matching the sheet</label>
+    </div>
+    <p class="note">
+      When this is on, a question that is in a quiz on the site but no longer in your sheet is taken out of the quiz.
+      The question itself stays in WordPress either way. Check always tells you before this happens.
+    </p>
+
+    <div class="actions">
+      <button class="primary" type="button" onclick="save()">Save</button>
+      <button type="button" onclick="google.script.host.close()">Close</button>
+      <span id="status"></span>
+    </div>
+
+    <script>
+      function save() {
+        var form = {
+          profile: document.querySelector('input[name="profile"]:checked').value,
+          detachMissing: document.getElementById('detachMissing').checked,
+          stagingUrl: document.getElementById('stagingUrl').value,
+          stagingKey: document.getElementById('stagingKey').value,
+          liveUrl: document.getElementById('liveUrl').value,
+          liveKey: document.getElementById('liveKey').value
+        };
+
+        document.getElementById('status').textContent = 'Saving...';
+
+        google.script.run
+          .withSuccessHandler(function () {
+            document.getElementById('status').textContent = 'Saved. Reload the sheet to update the menu.';
+            document.getElementById('stagingKey').value = '';
+            document.getElementById('liveKey').value = '';
+          })
+          .withFailureHandler(function (e) {
+            document.getElementById('status').textContent = String(e.message || e);
+          })
+          .saveSettings(form);
+      }
+
+      function forget(profile) {
+        google.script.run
+          .withSuccessHandler(function () {
+            document.getElementById('status').textContent = 'Key forgotten. Close and reopen this window.';
+          })
+          .forgetKey(profile);
+      }
+    </script>
+  </body>
+</html>
