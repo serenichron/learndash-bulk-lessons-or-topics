@@ -179,7 +179,18 @@ class Question extends Post {
       );
     }
 
-    return $question->getId();
+    $savedId = $question->getId();
+
+    // The mapper ignores sort on an update and picks its own on an insert,
+    // so passing it above is not enough. Sort is the column the quiz itself
+    // is ordered by when a student takes it, so a reordered sheet that only
+    // moved menu_order would look right in the admin and wrong in the test.
+    // updateSort() is the one method that writes it.
+    if ((int) $mapper->getSort($savedId) !== $this->position) {
+      $mapper->updateSort($savedId, $this->position);
+    }
+
+    return $savedId;
   }
 
   public function getProId(): int {

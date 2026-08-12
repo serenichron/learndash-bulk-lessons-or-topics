@@ -48,20 +48,24 @@ class ImportContext {
   /**
    * Claim the next position for a question inside a quiz.
    *
-   * Positions are zero based and follow sheet order, not the clock.
+   * Positions follow sheet order, not the clock. They count from one, which
+   * is what LearnDash does itself: its own insert uses getMaxSort() + 1, so
+   * the first question in a quiz is 1. Counting from zero would work for
+   * ordering but leaves the first question with a value that any code
+   * checking "is this set" would read as no.
    */
   public function nextQuestionPosition($quizId): int {
     $this->questionsByQuiz[$quizId] ??= [];
     $this->questionsByQuiz[$quizId][] = null;
 
-    return count($this->questionsByQuiz[$quizId]) - 1;
+    return count($this->questionsByQuiz[$quizId]);
   }
 
   /**
    * Record which post ended up at a position, once the post exists.
    */
   public function recordQuestion($quizId, int $position, int $questionId): void {
-    $this->questionsByQuiz[$quizId][$position] = $questionId;
+    $this->questionsByQuiz[$quizId][$position - 1] = $questionId;
   }
 
   /**
