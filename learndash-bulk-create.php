@@ -20,6 +20,8 @@ if (file_exists(__DIR__ . '/vendor/autoload.php')) {
 }
 
 use League\Csv\Reader;
+use TSTPrep\LDImporter\Api;
+use TSTPrep\LDImporter\ApiKeys;
 use TSTPrep\LDImporter\Exporter;
 use TSTPrep\LDImporter\Importer;
 
@@ -34,6 +36,41 @@ class Extended_LearnDash_Bulk_Create {
     add_action('admin_init', [$this, 'handle_form_submission']);
     add_action('wp_ajax_ld_import_gen_template', [$this, 'gen_template']);
     add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_scripts']);
+    add_action('admin_post_ldbc_create_key', [$this, 'handle_create_key']);
+    add_action('admin_post_ldbc_revoke_key', [$this, 'handle_revoke_key']);
+
+    (new Api())->register();
+  }
+
+  public function handle_create_key() {
+    check_admin_referer('ldbc_create_key');
+
+    if (!current_user_can('manage_options')) {
+      wp_die(__('You do not have sufficient permissions to perform this action.', 'extended-learndash-bulk-create'));
+    }
+
+    $key = ApiKeys::create(sanitize_text_field(wp_unslash($_POST['key_name'] ?? '')));
+
+    // The key is readable once and only once. Hand it over through a
+    // short lived transient rather than the address bar, which would put it
+    // in browser history and server logs.
+    set_transient('ldbc_new_key_' . get_current_user_id(), $key, 5 * MINUTE_IN_SECONDS);
+
+    wp_safe_redirect(admin_url('admin.php?page=extended-learndash-bulk-create#keys'));
+    exit();
+  }
+
+  public function handle_revoke_key() {
+    check_admin_referer('ldbc_revoke_key');
+
+    if (!current_user_can('manage_options')) {
+      wp_die(__('You do not have sufficient permissions to perform this action.', 'extended-learndash-bulk-create'));
+    }
+
+    ApiKeys::revoke(sanitize_text_field(wp_unslash($_POST['key_id'] ?? '')));
+
+    wp_safe_redirect(admin_url('admin.php?page=extended-learndash-bulk-create#keys'));
+    exit();
   }
 
   public function add_admin_menu() {

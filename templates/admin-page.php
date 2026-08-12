@@ -156,4 +156,79 @@ $types = ['quiz'];
     </table>
     <input type="submit" name="submit" id="template_submit" class="button button-primary" value="Generate template">
   </form>
+
+  <hr>
+
+  <h2 id="keys"><?php _e('Spreadsheet keys', 'extended-learndash-bulk-create'); ?></h2>
+  <p class="description" style="max-width: 40em;">
+    <?php _e(
+      'A key lets one spreadsheet push content to this site. Make one key per spreadsheet, so you can cancel one without disturbing the others. A key can only push quizzes and questions. It cannot log in, and it cannot delete anything.',
+      'extended-learndash-bulk-create',
+    ); ?>
+  </p>
+
+  <?php $newKey = get_transient('ldbc_new_key_' . get_current_user_id()); ?>
+  <?php if ($newKey): ?>
+    <?php delete_transient('ldbc_new_key_' . get_current_user_id()); ?>
+    <div class="notice notice-success">
+      <p><strong><?php _e(
+        'Copy this key now. It is not shown again.',
+        'extended-learndash-bulk-create',
+      ); ?></strong></p>
+      <p><input type="text" readonly value="<?= esc_attr($newKey) ?>" style="width: 100%; max-width: 40em; font-family: monospace;" onclick="this.select()"></p>
+    </div>
+  <?php endif; ?>
+
+  <table class="wp-list-table widefat fixed striped" style="max-width: 60em;">
+    <thead>
+      <tr>
+        <th><?php _e('Name', 'extended-learndash-bulk-create'); ?></th>
+        <th><?php _e('Made', 'extended-learndash-bulk-create'); ?></th>
+        <th><?php _e('Last used', 'extended-learndash-bulk-create'); ?></th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      <?php $keys = \TSTPrep\LDImporter\ApiKeys::all(); ?>
+      <?php if (empty($keys)): ?>
+        <tr><td colspan="4"><?php _e('No keys yet.', 'extended-learndash-bulk-create'); ?></td></tr>
+      <?php endif; ?>
+      <?php foreach ($keys as $key): ?>
+        <tr>
+          <td><?= esc_html($key['name']) ?></td>
+          <td><?= esc_html(date_i18n(get_option('date_format'), $key['created'])) ?></td>
+          <td>
+            <?= $key['last_used']
+              ? esc_html(date_i18n(get_option('date_format') . ' ' . get_option('time_format'), $key['last_used']))
+              : esc_html__('Never', 'extended-learndash-bulk-create') ?>
+          </td>
+          <td>
+            <form method="post" action="<?= esc_url(admin_url('admin-post.php')) ?>" style="margin: 0;">
+              <?php wp_nonce_field('ldbc_revoke_key'); ?>
+              <input type="hidden" name="action" value="ldbc_revoke_key">
+              <input type="hidden" name="key_id" value="<?= esc_attr($key['id']) ?>">
+              <button type="submit" class="button button-link-delete"><?php _e(
+                'Cancel this key',
+                'extended-learndash-bulk-create',
+              ); ?></button>
+            </form>
+          </td>
+        </tr>
+      <?php endforeach; ?>
+    </tbody>
+  </table>
+
+  <form method="post" action="<?= esc_url(admin_url('admin-post.php')) ?>" style="margin-top: 1em;">
+    <?php wp_nonce_field('ldbc_create_key'); ?>
+    <input type="hidden" name="action" value="ldbc_create_key">
+    <label for="key_name"><?php _e('Which spreadsheet is this for?', 'extended-learndash-bulk-create'); ?></label>
+    <input name="key_name" id="key_name" class="regular-text" placeholder="<?php esc_attr_e(
+      'TOEFL Speaking sheet',
+      'extended-learndash-bulk-create',
+    ); ?>" required>
+    <button type="submit" class="button"><?php _e('Make a key', 'extended-learndash-bulk-create'); ?></button>
+  </form>
+
+  <h3><?php _e('Address for the spreadsheet', 'extended-learndash-bulk-create'); ?></h3>
+  <p><input type="text" readonly value="<?= esc_attr(rest_url(\TSTPrep\LDImporter\Api::NS)) ?>" style="width: 100%; max-width: 40em; font-family: monospace;" onclick="this.select()"></p>
 </div>
