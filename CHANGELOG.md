@@ -5,6 +5,64 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-08-12
+
+### Added
+- Push content straight from a Google spreadsheet. `apps-script/` holds the
+  script, which adds a LearnDash menu with Check and Push and writes the new
+  IDs back into the sheet.
+- Three REST routes under `ldbc/v1`: `ping`, `check` and `push`. None delete.
+- API keys, made and cancelled on the admin page. One per spreadsheet, stored
+  hashed, shown once. Ten failures from an address buys a fifteen minute wait.
+- A check pass that runs before every import. Nothing is written unless the
+  whole sheet is clean, so a bad row can no longer leave half a quiz behind.
+  It catches malformed JSON, unknown question types, IDs that are missing or
+  the wrong post type, `PREV` with nothing above it, `PREV` on a question,
+  questions with no quiz, and sheets that are not upload sheets.
+- Check only and detach options on the admin CSV form.
+- Questions dropped from a sheet are reported, and taken out of their quiz
+  only when asked. The question post is always kept.
+- The admin page now says what an import did instead of staying silent.
+
+### Fixed
+- **Question order.** Every question was written with `menu_order` 0 and pro
+  `sort` 1, leaving the creation timestamp as the only tiebreak. WordPress
+  stores that to the second, which is why the import paused a second per row.
+  Both fields now carry the question's real position in its quiz.
+- **A row with no question no longer kills the import.** `setProps()` ran
+  before the null check, so an empty question type threw on any course,
+  lesson or topic row.
+- **The CSV upload reads the whole file before deleting anything.** The
+  delete ran first, so a file that failed to parse cost you the quiz.
+- **The exporter never wrote quiz columns.** It tested a variable that was
+  never passed in, so the test always failed.
+- **The exporter had no permission or nonce check.** Any logged in user could
+  pull question and quiz content.
+- Exported files used semicolons while the importer read commas, so a
+  template could not be imported without editing it first.
+- `ld_quiz_questions` is rebuilt in sheet order, so reordering rows reorders
+  the quiz.
+- Error output on the admin page was echoed raw, including values from the
+  CSV.
+- Duplicate element IDs on the admin page pointed labels at the wrong fields.
+
+### Changed
+- The importer no longer depends on the admin plugin object, so it runs in a
+  REST request. New `ImportContext` carries the error list and the per-quiz
+  position counters.
+- Structured columns can arrive already decoded, not only as JSON strings.
+  The spreadsheet sends real JSON rather than JSON quoted inside a CSV.
+- Admin script version is the plugin version, not `time()`.
+- The exporter emits `quiz_meta`, `quiz_pro_fields` and `question_pro_fields`,
+  which the importer already read.
+
+### Removed
+- The `update2` action, which read a `demo.csv` that does not exist and
+  deleted post 0 on the way.
+- Around 270 lines of unreachable code: the backup, diff and confirm changes
+  feature that was never wired up, along with its `confirm_changes` AJAX
+  endpoint and the backups directory made on activation.
+
 ## [1.2.6] - 2026-06-08
 
 ### Added

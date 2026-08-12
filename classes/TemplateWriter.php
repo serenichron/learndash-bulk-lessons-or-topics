@@ -24,6 +24,8 @@ class TemplateWriter {
 
         if ($type === 'quiz') {
           $this->columns[] = $type . '_affixes';
+          $this->columns[] = $type . '_meta';
+          $this->columns[] = $type . '_pro_fields';
         }
       } elseif ($included || !empty($this->columns)) {
         $this->columns[] = $type . '_id';
@@ -37,8 +39,11 @@ class TemplateWriter {
     $this->columns[] = 'question_answers';
     $this->columns[] = 'question_meta';
     $this->columns[] = 'question_affixes';
+    $this->columns[] = 'question_pro_fields';
 
-    $this->writer = Writer::createFromString('')->setDelimiter(';');
+    // Commas, because the importer reads commas. These two disagreed, so a
+    // template you exported could not be imported again without editing it.
+    $this->writer = Writer::createFromString('')->setDelimiter(',');
     $this->writer->insertOne($this->columns);
   }
 
@@ -64,6 +69,18 @@ class TemplateWriter {
 
   public function quizAffixes($affixes) {
     $this->data['quiz_affixes'] = json_encode($affixes);
+  }
+
+  public function quizMeta($meta) {
+    $this->data['quiz_meta'] = json_encode($meta);
+  }
+
+  public function quizProFields($fields) {
+    $this->data['quiz_pro_fields'] = json_encode($fields);
+  }
+
+  public function questionProFields($fields) {
+    $this->data['question_pro_fields'] = json_encode($fields);
   }
 
   public function question(int|string|null $id = null, ?string $title = null, ?string $content = null) {
@@ -104,7 +121,7 @@ class TemplateWriter {
   }
 
   public function download() {
-    $this->writer->download('f.csv');
+    $this->writer->download('learndash-import-template.csv');
     die();
   }
 }

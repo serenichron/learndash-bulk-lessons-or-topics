@@ -1,100 +1,124 @@
 # LearnDash Bulk Create
 
-A WordPress plugin that extends LearnDash functionality to allow bulk creation of Courses, Lessons, or Topics using a CSV file.
+A WordPress plugin for building LearnDash quizzes and questions in bulk,
+either from a CSV file or straight from a Google spreadsheet.
 
-## Description
+## What it does
 
-LearnDash Bulk Create adds a new menu item under LearnDash in the WordPress admin panel, allowing administrators to bulk create LearnDash content (Courses, Lessons, or Topics) by uploading a CSV file. This plugin streamlines the process of creating multiple LearnDash content items at once, saving time and effort for course creators.
+Content is described one row at a time. A row can carry a group, a course,
+a lesson, a topic, a quiz and a question, and each of those is either made
+fresh, updated by ID, or carried down from the row above.
 
-## Features
+Two ways in.
 
-- Bulk create Courses, Lessons, or Topics
-- Upload CSV file with content details
-- Specify parent relationships (e.g., Course ID for Lessons, Lesson ID for Topics)
-- Downloadable CSV template for easy formatting
-- Seamless integration with LearnDash LMS
+**A CSV upload**, on the admin page under LearnDash, Bulk Create/Update.
+
+**A Google spreadsheet**, using the script in [apps-script/](apps-script/).
+It adds a LearnDash menu to your spreadsheet with Check and Push, and writes
+the new IDs back into the sheet for you. Setup is in
+[apps-script/README.md](apps-script/README.md).
+
+Both go through the same importer, so a quiz comes out the same either way.
+
+## Nothing is written until the whole sheet is clean
+
+Every import is checked first. If any row has a problem, nothing at all is
+written, and you get the list of problems with the row and column named.
+
+The check catches malformed JSON in any of the structured columns, question
+types that do not exist, IDs that are not on the site or are the wrong post
+type, `PREV` with nothing above it to point at, questions with no quiz to go
+in, and sheets that are not upload sheets at all.
+
+## Columns
+
+| Column | Meaning |
+| --- | --- |
+| `group_id` | An existing LearnDash group. Numbers only |
+| `course_id`, `course_post_title`, `course_post_content` | |
+| `lesson_id`, `lesson_post_title`, `lesson_post_content` | |
+| `topic_id`, `topic_post_title`, `topic_post_content` | |
+| `quiz_id`, `quiz_post_title`, `quiz_post_content` | |
+| `quiz_affixes`, `quiz_meta`, `quiz_pro_fields` | JSON |
+| `question_id`, `question_post_title`, `question_post_content` | |
+| `question_type` | Must match a type registered by the advanced quizzes plugin |
+| `question_answers`, `question_meta`, `question_affixes`, `question_pro_fields` | JSON |
+
+Every column is optional. A row simply does nothing at a level whose ID
+column is empty.
+
+Each `*_id` column takes one of four things.
+
+| Value | What happens |
+| --- | --- |
+| `CREATE` | Make something new. Its ID is reported back |
+| `PREV` | Reuse whatever the row above resolved to |
+| a number | Update the post with that ID |
+| empty | This row has nothing at this level |
+
+`PREV` does not work on `question_id`. Every question needs its own row.
+
+Question order follows sheet order. Reordering rows in the sheet and pushing
+again reorders the quiz.
 
 ## Requirements
 
 - WordPress 5.0 or higher
-- PHP 7.2 or higher
-- LearnDash LMS plugin (version 3.0 or higher)
+- PHP 8.0 or higher
+- LearnDash LMS 3.0 or higher
+- The TSTPrep advanced quizzes plugin, which registers the question types
 
 ## Installation
 
-This plugin is designed to be installed using Composer. To install, follow these steps:
+Composer, from the plugin root:
 
-1. Ensure you have Composer installed on your system.
+```
+composer install
+```
 
-2. Add the plugin repository to your project's `composer.json` file:
+To pull it into a site, add the repository to your project's `composer.json`:
 
-   ```json
-   {
-     "repositories": [
-       {
-         "type": "vcs",
-         "url": "git@github.com:serenichron/learndash-bulk-lessons-or-topics.git"
-       }
-     ]
-   }
-   ```
+```json
+{
+  "repositories": [
+    {
+      "type": "vcs",
+      "url": "git@github.com:serenichron/learndash-bulk-lessons-or-topics.git"
+    }
+  ]
+}
+```
 
-3. Require the plugin in your project:
+Then `composer require serenichron/learndash-bulk-create` and activate.
 
-   ```
-   composer require serenichron/learndash-bulk-create
-   ```
+## The API
 
-4. If you're using a custom installer location for WordPress plugins, make sure it's configured correctly in your `composer.json`:
+Three routes under `ldbc/v1`, used by the spreadsheet script.
 
-   ```json
-   {
-     "extra": {
-       "installer-paths": {
-         "wp-content/plugins/{$name}/": ["type:wordpress-plugin"]
-       }
-     }
-   }
-   ```
+| Route | Does |
+| --- | --- |
+| `GET /ping` | Reports which site this is, and whether LearnDash and the question types plugin are present |
+| `POST /check` | Reads rows and reports. Writes nothing |
+| `POST /push` | Checks, then builds. Returns the resolved IDs per row |
 
-5. Update your autoloader:
+None of them delete anything.
 
-   ```
-   composer dump-autoload
-   ```
+Authentication is a key made on the admin page, sent as an `X-LDBC-Key`
+header or a bearer token. Make one key per spreadsheet so they can be
+cancelled one at a time. Only the hash is stored, and the key is shown once.
 
-6. Activate the plugin through the WordPress admin panel or WP-CLI.
-
-## Usage
-
-1. Navigate to LearnDash > Bulk Create in the WordPress admin menu.
-2. Choose the content type you want to create (Course, Lesson, or Topic).
-3. If creating Lessons or Topics, enter the parent ID (Course ID for Lessons, Lesson ID for Topics).
-4. Download the CSV template and fill it with your content details.
-5. Upload your prepared CSV file.
-6. Click "Upload and Create" to process the file and create the content.
-
-## CSV Format
-
-The CSV file should have the following columns:
-
-- `post_title`: The title of the course, lesson, or topic
-- `post_content`: The main content
-- Additional columns for custom fields (if needed)
-
-You can download a template CSV file from the Bulk Create page in the admin panel.
+`push` takes a `detach_missing` flag, off by default. When on, a question
+that sits in a quiz on the site but is no longer in the sheet is taken out
+of the quiz. The question post itself is always kept.
 
 ## Support
 
-For bug reports or feature requests, please use the [GitHub issue tracker](https://github.com/serenichron/learndash-bulk-create/issues).
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
+Bug reports and feature requests go to the
+[GitHub issue tracker](https://github.com/serenichron/learndash-bulk-create/issues).
 
 ## License
 
-This plugin is licensed under the GPL v2 or later.
+GPL v2 or later.
 
 ```
 This program is free software; you can redistribute it and/or
@@ -114,8 +138,4 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 ## Changelog
 
-### 1.2.1
-- Add AGENTS.md contributor guide with repository workflow notes.
-
-### 1.0.0
-- Initial release
+See [CHANGELOG.md](CHANGELOG.md).

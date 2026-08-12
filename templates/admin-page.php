@@ -113,6 +113,7 @@ $types = ['quiz'];
     admin_url('admin-ajax.php'),
   ) ?>">
     <input type="hidden" name="action" value="ld_import_gen_template">
+    <input type="hidden" name="nonce" value="<?= esc_attr(wp_create_nonce('eldbc_ajax_nonce')) ?>">
     <table class="form-table">
       <tr>
         <th scope="row"><label for="include">Include up to</label></th>
