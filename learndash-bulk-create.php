@@ -22,13 +22,13 @@ if (file_exists(__DIR__ . '/vendor/autoload.php')) {
 use League\Csv\Reader;
 use TSTPrep\LDImporter\Data;
 use TSTPrep\LDImporter\Exporter;
+use TSTPrep\LDImporter\ImportContext;
 use TSTPrep\LDImporter\Post\Posts;
 
 class Extended_LearnDash_Bulk_Create {
   private $supported_post_types = ['sfwd-courses', 'sfwd-lessons', 'sfwd-topic', 'sfwd-quiz', 'sfwd-question'];
   private $changes = [];
   public $errorMessages = [];
-  public $url = '';
 
   public function __construct() {
     add_action('admin_menu', [$this, 'add_admin_menu']);
@@ -87,81 +87,119 @@ class Extended_LearnDash_Bulk_Create {
       wp_die(__('You do not have sufficient permissions to access this page.', 'extended-learndash-bulk-create'));
     }
 
-    $action_type = $_POST['action_type'];
+    $action_type = sanitize_key($_POST['action_type'] ?? '');
 
     if ($action_type === 'update' && (!isset($_FILES['csv_file']) || $_FILES['csv_file']['error'] !== UPLOAD_ERR_OK)) {
       wp_die(__('CSV file upload failed. Please try again.', 'extended-learndash-bulk-create'));
     }
 
     if ($action_type === 'delete') {
-      $ids = explode(',', $_POST['quizId']);
-      foreach ($ids as $id) {
-        $id = trim($id);
-        $questions = get_post_meta($id, 'ld_quiz_questions', true);
-        if (is_array($questions)) {
-          $questions = array_keys($questions);
-          foreach ($questions as $q) {
-            wp_delete_post($q, true);
-          }
-          wp_delete_post($id, true);
-        }
-      }
-    } elseif ($action_type === 'update2') {
-      $id = 0;
-      $questions = get_post_meta($id, 'ld_quiz_questions', true);
-      if (is_array($questions)) {
-        $questions = array_keys($questions);
-        foreach ($questions as $q) {
-          wp_delete_post($q, true);
-        }
-        wp_delete_post($id, true);
-      }
-
-      $reader = Reader::createFromPath(__DIR__ . '/templates/demo.csv');
-      $reader->setHeaderOffset(0);
-      $records = $reader->getRecords();
-
-      $oldPosts = null;
-
-      foreach ($records as $index => $record) {
-        $data = new Data($record, $index, $this);
-        $posts = new Posts();
-        $posts->createOrUpdate($data, $oldPosts);
-        $posts->updateMeta($data);
-        $oldPosts = $posts;
-        sleep(1);
-      }
-    } elseif ($action_type === 'update') {
-      $id = $_POST['quizId'] ?? 0;
-      $questions = get_post_meta($id, 'ld_quiz_questions', true);
-      if (is_array($questions)) {
-        $questions = array_keys($questions);
-        foreach ($questions as $q) {
-          wp_delete_post($q, true);
-        }
-        wp_delete_post($id, true);
-      }
-
-      try {
-        $reader = Reader::createFromPath($_FILES['csv_file']['tmp_name']);
-        $reader->setHeaderOffset(0);
-        $records = $reader->getRecords();
-
-        $oldPosts = null;
-
-        foreach ($records as $index => $record) {
-          $data = new Data($record, $index, $this);
-          $posts = new Posts();
-          $posts->createOrUpdate($data, $oldPosts);
-          $posts->updateMeta($data);
-          $oldPosts = $posts;
-          sleep(1);
-        }
-      } catch (Exception $e) {
-        error_log($e);
-        $this->errorMessages[] = $e->getMessage();
-      }
+      $this->delete_quizzes(explode(',', (string) ($_POST['quizId'] ?? '')));
+      return;
     }
+
+    if ($action_type !== 'update') {
+      return;
+    }
+
+    try {
+      // Read the whole file before anything on the site is touched. The
+      // delete below used to run first, so a file that failed to parse cost
+      // you the quiz and gave you nothing back.
+      $reader = Reader::createFromPath($_FILES['csv_file']['tmp_name']);
+      $reader->setHeaderOffset(0);
+      $records = iterator_to_array($reader->getRecords());
+
+      $this->delete_quizzes(explode(',', (string) ($_POST['quizId'] ?? '')));
+
+      $context = new ImportContext();
+      $this->run_import($records, $context);
+
+      foreach ($context->errors() as $error) {
+        $this->errorMessages[] = $this->format_error($error);
+      }
+    } catch (Exception $e) {
+      error_log($e);
+      $this->errorMessages[] = $e->getMessage();
+    }
+  }
+
+  /**
+   * Walk the rows and build the content.
+   *
+   * There is deliberately no pause between rows. Order now comes from the
+   * position written onto each question, not from the creation timestamp.
+   *
+   * @param iterable<mixed, array<string, mixed>> $records
+   */
+  private function run_import(iterable $records, ImportContext $context): void {
+    $oldPosts = null;
+
+    foreach ($records as $index => $record) {
+      $data = new Data($record, $this->row_label($index), $context);
+      $posts = new Posts();
+      $posts->createOrUpdate($data, $oldPosts);
+      $posts->updateMeta($data);
+      $oldPosts = $posts;
+    }
+  }
+
+  /**
+   * Turn a reader offset into the row number the user sees in their sheet.
+   * The header sits at offset 0, so the first row of data is row 2.
+   */
+  private function row_label($index) {
+    return is_int($index) ? $index + 1 : $index;
+  }
+
+  private function format_error(array $error): string {
+    $where = [];
+
+    if ($error['row'] !== null) {
+      $where[] = sprintf(__('row %s', 'extended-learndash-bulk-create'), $error['row']);
+    }
+
+    if ($error['column'] !== null) {
+      $where[] = sprintf(__('column %s', 'extended-learndash-bulk-create'), $error['column']);
+    }
+
+    if (empty($where)) {
+      return $error['message'];
+    }
+
+    return implode(', ', $where) . ': ' . $error['message'];
+  }
+
+  /**
+   * Permanently remove quizzes and every question attached to them.
+   *
+   * Only reachable from the admin form. The REST route never deletes.
+   *
+   * @param array<int, mixed> $ids
+   */
+  private function delete_quizzes(array $ids): int {
+    $deleted = 0;
+
+    foreach ($ids as $id) {
+      $id = absint(trim((string) $id));
+      if (!$id) {
+        continue;
+      }
+
+      $questions = get_post_meta($id, 'ld_quiz_questions', true);
+      if (!is_array($questions)) {
+        continue;
+      }
+
+      foreach (array_keys($questions) as $questionId) {
+        wp_delete_post($questionId, true);
+      }
+
+      wp_delete_post($id, true);
+      $deleted++;
+    }
+
+    return $deleted;
   }
 
   private function process_create($content_type, $csv_data, $headers) {

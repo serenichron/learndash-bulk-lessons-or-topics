@@ -14,52 +14,48 @@ $types = ['quiz'];
     <div style="color: red;">
       <h2>ERROR</h2>
       <?php foreach ($this->errorMessages as $e): ?>
-        <p><?= $e ?></p>
+        <p><?= esc_html($e) ?></p>
       <?php endforeach; ?>
     </div>
   <?php endif; ?>
 
-  <form method="post" enctype="multipart/form-data">
+  <h2><?php _e('Delete a quiz', 'extended-learndash-bulk-create'); ?></h2>
+  <form method="post">
     <?php wp_nonce_field('extended_learndash_bulk_create', 'extended_learndash_bulk_create_nonce'); ?>
+    <input type="hidden" name="action_type" value="delete">
     <table class="form-table">
       <tr>
-        <th scope="row"><label for="action_type"><?php _e('Action', 'extended-learndash-bulk-create'); ?></label></th>
+        <th scope="row"><label for="delete_quiz_id">Quiz Id</label></th>
         <td>
-          <select name="action_type" id="action_type">
-            <option value="delete"><?php _e('Delete', 'extended-learndash-bulk-create'); ?></option>
-            <option value="update2"><?php _e('Update2', 'extended-learndash-bulk-create'); ?></option>
-          </select>
-        </td>
-      </tr>
-      <tr>
-        <th scope="row"><label for="quizId">Quiz Id</label></th>
-        <td>
-          <input name="quizId" id="quizId">
+          <input name="quizId" id="delete_quiz_id">
+          <p class="description"><?php _e(
+            'The quiz and all of its questions are removed permanently. There is no undo.',
+            'extended-learndash-bulk-create',
+          ); ?></p>
         </td>
       </tr>
     </table>
     <p class="submit">
-      <input type="submit" name="submit" id="submit" class="button button-primary" style="background-color: red;" value="<?php _e(
+      <input type="submit" name="submit" id="delete_submit" class="button button-primary" style="background-color: red;" value="<?php _e(
         'Delete Quiz',
         'extended-learndash-bulk-create',
       ); ?>">
     </p>
   </form>
+
+  <h2><?php _e('Upload a CSV', 'extended-learndash-bulk-create'); ?></h2>
   <form method="post" enctype="multipart/form-data">
     <?php wp_nonce_field('extended_learndash_bulk_create', 'extended_learndash_bulk_create_nonce'); ?>
+    <input type="hidden" name="action_type" value="update">
     <table class="form-table">
       <tr>
-        <th scope="row"><label for="action_type"><?php _e('Action', 'extended-learndash-bulk-create'); ?></label></th>
+        <th scope="row"><label for="import_quiz_id">Quiz Id</label></th>
         <td>
-          <select name="action_type" id="action_type">
-            <option value="update"><?php _e('Update', 'extended-learndash-bulk-create'); ?></option>
-          </select>
-        </td>
-      </tr>
-      <tr>
-        <th scope="row"><label for="quizId">Quiz Id</label></th>
-        <td>
-          <input name="quizId" id="quizId">
+          <input name="quizId" id="import_quiz_id">
+          <p class="description"><?php _e(
+            'Optional. Fill this in to wipe an existing quiz before the file is imported. Leave it empty to import without deleting anything.',
+            'extended-learndash-bulk-create',
+          ); ?></p>
         </td>
       </tr>
       <tr>
@@ -71,12 +67,14 @@ $types = ['quiz'];
       </tr>
     </table>
     <p class="submit">
-      <input type="submit" name="submit" id="submit" class="button button-primary" value="<?php _e(
+      <input type="submit" name="submit" id="import_submit" class="button button-primary" value="<?php _e(
         'Process CSV',
         'extended-learndash-bulk-create',
       ); ?>">
     </p>
   </form>
+
+  <h2><?php _e('Generate a template', 'extended-learndash-bulk-create'); ?></h2>
   <form method="post" enctype="multipart/form-data" class="gen_template_form" data-url="<?= str_replace(
     ['http:', 'https:'],
     ['', ''],
@@ -124,9 +122,6 @@ $types = ['quiz'];
         </td>
       </tr>
     </table>
-    <input type="submit" name="submit" id="submit" class="button button-primary" value="Generate template">
+    <input type="submit" name="submit" id="template_submit" class="button button-primary" value="Generate template">
   </form>
-  <?php if ($this->url) { ?>
-    <a href="<?= $this->url ?>">Download file</a>
-  <?php } ?>
 </div>

@@ -23,21 +23,26 @@ abstract class Post {
     $post = new static();
 
     $id = $data->id($post->type);
-    $post->setProps($data);
 
+    // This row has nothing at this level. Read no further: a row with no
+    // question in it must not be forced through Question::setProps(), which
+    // throws on an empty question type.
     if ($id === null) {
-      // Do nothing.
       return $post;
     }
 
-    if ($id === 'CREATE') {
-      $post->create($posts);
+    // Reuse whatever the previous row resolved to. Nothing on the row itself
+    // applies, so there are no properties to read.
+    if ($id === 'PREV') {
+      $post->prev($posts);
       $data->setId($post->type, $post->id);
       return $post;
     }
 
-    if ($id === 'PREV') {
-      $post->prev($posts);
+    $post->setProps($data, $posts);
+
+    if ($id === 'CREATE') {
+      $post->create($posts);
       $data->setId($post->type, $post->id);
       return $post;
     }
@@ -98,7 +103,7 @@ abstract class Post {
     $this->isPrev = true;
   }
 
-  protected function setProps(Data $data) {
+  protected function setProps(Data $data, Posts $posts) {
     $this->title = $data->title($this->type);
     $this->content = $data->content($this->type);
   }

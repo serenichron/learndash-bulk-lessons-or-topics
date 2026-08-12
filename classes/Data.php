@@ -3,17 +3,28 @@
 namespace TSTPrep\LDImporter;
 
 use Exception;
-use Extended_LearnDash_Bulk_Create;
 
 class Data {
-  private Extended_LearnDash_Bulk_Create $plugin;
+  private ImportContext $context;
   private array $data;
   private $index;
 
-  public function __construct(array $data, $index, Extended_LearnDash_Bulk_Create $plugin) {
+  public function __construct(array $data, $index, ImportContext $context) {
     $this->data = $data;
     $this->index = $index;
-    $this->plugin = $plugin;
+    $this->context = $context;
+  }
+
+  public function context(): ImportContext {
+    return $this->context;
+  }
+
+  /**
+   * Row label used in error messages. The caller decides what it means, so
+   * the REST route can pass the spreadsheet row number the user actually sees.
+   */
+  public function row() {
+    return $this->index;
   }
 
   public function id(string $type, bool $includeSpecial = true): string|int|null {
@@ -92,21 +103,33 @@ class Data {
     return $value;
   }
 
+  /**
+   * Read a column that holds structured data.
+   *
+   * A CSV upload delivers these as a JSON string. The REST route delivers
+   * them already decoded, because there is no reason to serialise data just
+   * to parse it again, and the quoting is where CSV goes wrong most often.
+   */
   private function getJsonValue(string $key) {
-    $answers = $this->getValue($key);
-    if ($answers !== null) {
-      $answers = json_decode($answers, true);
-
-      if ($answers === null) {
-        $m1 = 'Error decoding row ' . $this->index . ', column ' . $key;
-        $m2 = json_last_error_msg();
-        error_log('[IMPORT] ' . $m1);
-        error_log('[IMPORT] ' . $m2);
-        $this->plugin->errorMessages[] = $m1 . '. ' . $m2;
-      }
+    $raw = $this->data[$key] ?? null;
+    if (is_array($raw)) {
+      return $raw;
     }
 
-    return $answers;
+    $value = $this->getValue($key);
+    if ($value === null) {
+      return null;
+    }
+
+    $decoded = json_decode($value, true);
+
+    if ($decoded === null && json_last_error() !== JSON_ERROR_NONE) {
+      $message = json_last_error_msg();
+      error_log('[IMPORT] Error decoding row ' . $this->index . ', column ' . $key . '. ' . $message);
+      $this->context->addError($message, $this->index, $key);
+    }
+
+    return $decoded;
   }
 
   public function setId(string $type, ?int $id) {

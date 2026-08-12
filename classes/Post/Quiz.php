@@ -17,8 +17,8 @@ class Quiz extends Post {
   protected string $quizType = 'base';
   protected $proFields = [];
 
-  protected function setProps(Data $data) {
-    parent::setProps($data);
+  protected function setProps(Data $data, Posts $posts) {
+    parent::setProps($data, $posts);
 
     $meta = $data->quizMeta();
     if (!empty($meta) && isset($meta['quiz_type'])) {

@@ -24,9 +24,23 @@ class Question extends Post {
   protected $proFields = [];
   protected RegisteredQuestion $registered;
 
-  protected function setProps(Data $data) {
-    parent::setProps($data);
+  /**
+   * Where this question sits inside its quiz, counted over the current run.
+   *
+   * Both ordering fields below are set from this. They used to be fixed
+   * values, 0 and 1, identical for every question, which left the creation
+   * timestamp as the only tiebreak. WordPress records that to the second,
+   * so anything imported faster than a second a row came out shuffled.
+   */
+  protected int $position = 0;
+
+  protected function setProps(Data $data, Posts $posts) {
+    parent::setProps($data, $posts);
     $this->questionType = $data->questionType() ?? '';
+
+    if ($posts->quiz?->exists()) {
+      $this->position = $data->context()->nextQuestionPosition($posts->quiz->id);
+    }
 
     $this->proFields = array_intersect_key(
       $data->questionProFields(),
@@ -78,19 +92,12 @@ class Question extends Post {
       update_post_meta($this->id, 'quiz_id', $posts->quiz->id);
       update_post_meta($this->id, 'ld_quiz_id', $posts->quiz->getProId());
       update_post_meta($this->id, '_sfwd-question', ['sfwd-question_quiz' => (string) $posts->quiz->id]);
+      remove_action('post_updated', 'wp_save_post_revision');
+      wp_update_post(['ID' => $this->id, 'menu_order' => $this->position]);
+      add_action('post_updated', 'wp_save_post_revision');
+
       $questions = get_post_meta($posts->quiz->id, 'ld_quiz_questions', true);
-
-      if (is_array($questions)) {
-        $keys = array_keys($questions);
-        $index = array_search($this->id, $keys);
-        if ($index === false) {
-          $index = 0;
-        }
-
-        remove_action('post_updated', 'wp_save_post_revision');
-        wp_update_post(['ID' => $this->id, 'menu_order' => $index]);
-        add_action('post_updated', 'wp_save_post_revision');
-      } else {
+      if (!is_array($questions)) {
         $questions = [];
       }
 
@@ -98,6 +105,8 @@ class Question extends Post {
         $questions[$this->id] = $this->quizQuestionId;
         update_post_meta($posts->quiz->id, 'ld_quiz_questions', $questions);
       }
+
+      $data->context()->recordQuestion($posts->quiz->id, $this->position, $this->id);
 
       if ($oldQuizId && intval($oldQuizId) !== $posts->quiz->id) {
         $questions = get_post_meta($oldQuizId, 'ld_quiz_questions', true);
@@ -140,7 +149,7 @@ class Question extends Post {
           'id' => $proId,
           'questionPostId' => $this->id,
           'quizId' => $posts->quiz->getProId(),
-          'sort' => 1,
+          'sort' => $this->position,
           'title' => $this->title,
           'question' => $this->content,
           'answerType' => $this->questionType,
