@@ -54,12 +54,15 @@ abstract class Post {
   }
 
   public function create(Posts $posts) {
-    $args = [
-      'post_title' => $this->title ?? '',
-      'post_content' => $this->content ?? '',
-      'post_type' => $this->wpType,
-      'post_status' => 'publish',
-    ];
+    $args = array_merge(
+      [
+        'post_title' => $this->title ?? '',
+        'post_content' => $this->content ?? '',
+        'post_type' => $this->wpType,
+        'post_status' => 'publish',
+      ],
+      $this->extraArgs(),
+    );
 
     $id = wp_insert_post($args, true);
 
@@ -85,6 +88,8 @@ abstract class Post {
       $args['post_content'] = $this->content;
     }
 
+    $args = array_merge($args, $this->extraArgs());
+
     if (count($args) === 1) {
       return;
     }
@@ -106,6 +111,19 @@ abstract class Post {
   protected function setProps(Data $data, Posts $posts) {
     $this->title = $data->title($this->type);
     $this->content = $data->content($this->type);
+  }
+
+  /**
+   * Extra post fields to write in the same save as the title and content.
+   *
+   * A second wp_update_post just to set one column costs a full trip through
+   * every hook on the save path, which is the most expensive thing an import
+   * does. Anything that can ride along with the first save should.
+   *
+   * @return array<string, mixed>
+   */
+  protected function extraArgs(): array {
+    return [];
   }
 
   abstract public function updateMeta(Data $data, Posts $posts);

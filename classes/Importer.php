@@ -55,6 +55,9 @@ class Importer {
     $oldPosts = null;
     $label = null;
 
+    $bulk = new BulkMode();
+    $bulk->start();
+
     try {
       foreach ($rows as $label => $row) {
         $data = new Data($row, $label, $context);
@@ -78,6 +81,8 @@ class Importer {
         'column' => null,
         'message' => $e->getMessage(),
       ];
+    } finally {
+      $bulk->finish();
     }
 
     // Problems the row loop noticed on its way through, such as a value that

@@ -34,6 +34,15 @@ class Question extends Post {
    */
   protected int $position = 0;
 
+  /**
+   * menu_order rides along with the title and content rather than getting a
+   * save of its own. On a site with a cache plugin that second save was
+   * costing more than everything else in the import put together.
+   */
+  protected function extraArgs(): array {
+    return ['menu_order' => $this->position];
+  }
+
   protected function setProps(Data $data, Posts $posts) {
     parent::setProps($data, $posts);
     $this->questionType = $data->questionType() ?? '';
@@ -92,10 +101,6 @@ class Question extends Post {
       update_post_meta($this->id, 'quiz_id', $posts->quiz->id);
       update_post_meta($this->id, 'ld_quiz_id', $posts->quiz->getProId());
       update_post_meta($this->id, '_sfwd-question', ['sfwd-question_quiz' => (string) $posts->quiz->id]);
-      remove_action('post_updated', 'wp_save_post_revision');
-      wp_update_post(['ID' => $this->id, 'menu_order' => $this->position]);
-      add_action('post_updated', 'wp_save_post_revision');
-
       $questions = get_post_meta($posts->quiz->id, 'ld_quiz_questions', true);
       if (!is_array($questions)) {
         $questions = [];
