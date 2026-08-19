@@ -38,8 +38,14 @@ site. It has to, so say yes.
 **4. Fill in the settings.**
 
 LearnDash, then Settings. Put in the address of the site and the key you
-copied. There is room for a staging site and a live one, and a switch for
-which is in use. The menu always says which one you are pointed at.
+copied. There is room for three sites, dev staging, QA staging and
+production, with a switch for which is in use. The menu always says which
+one you are pointed at.
+
+If a site pops up a username and password box in the browser before the
+page even loads, put that pair in the site username and site password boxes
+for it. Both staging sites do this; production does not. It is not your
+WordPress login, it is the one the server asks for at the door.
 
 Then use Test the connection. It should name the site back to you and
 confirm that LearnDash and the question types plugin are both there.
@@ -84,11 +90,16 @@ setting is on or off.
 
 ## When something goes wrong
 
-**"The staging site is not set up yet"** means the address or the key is
+**"The dev staging site is not set up yet"** means the address or the key is
 missing. Open Settings.
 
 **"That key is not valid for this site"** usually means the key belongs to
-the other site. Check which profile is selected.
+one of the other sites. Check which one is selected. Each site needs its own
+key, made on that site.
+
+**"The site asked for a username and password before letting us in"** is the
+web server, not WordPress. Fill in the site username and site password for
+that site in Settings, or correct what is in them.
 
 **"Too many failed attempts"** means ten bad keys in a row from your
 connection. Wait fifteen minutes.

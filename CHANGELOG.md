@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **A third site, and doors that ask for a password.** The spreadsheet script
+  held two sites, staging and live. It now holds three, dev staging, QA staging
+  and production, and each carries an optional site username and password for
+  the server's own login box, sent as basic auth alongside the key.
+
 ### Fixed
 - **Sheets without a quiz.** A sheet was only accepted if it had a `quiz_id` or
   `question_id` column, so a sheet of nothing but courses, lessons or topics was

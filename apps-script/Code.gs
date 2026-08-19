@@ -5,12 +5,23 @@
  * will use, Check and Push, and a settings screen for the site address and
  * the key.
  *
- * Two sites are kept side by side, staging and live, and the menu always
- * says which one you are pointed at. Switching between them is a deliberate
- * choice you make in settings, never a side effect of anything else.
+ * Three sites are kept side by side, dev staging, QA staging and production,
+ * and the menu always says which one you are pointed at. Switching between
+ * them is a deliberate choice you make in settings, never a side effect of
+ * anything else.
+ *
+ * The two staging sites sit behind the browser's own username and password
+ * box, so each site can carry one of those alongside its key.
  */
 
 var LEVELS = ['group', 'course', 'lesson', 'topic', 'quiz', 'question'];
+
+/** The sites you can point at, in the order the settings screen shows them. */
+var PROFILES = [
+  { key: 'dev', label: 'Dev staging' },
+  { key: 'qa', label: 'QA staging' },
+  { key: 'live', label: 'Production' }
+];
 
 /** Above this many rows the sheet is sent in pieces, split between quizzes. */
 var CHUNK_ABOVE = 200;
@@ -21,7 +32,7 @@ function onOpen() {
   var target = 'not set up';
   try {
     var cfg = config();
-    target = cfg.profile + ', ' + hostOf(cfg.url);
+    target = cfg.label + ', ' + hostOf(cfg.url);
   } catch (e) {}
 
   SpreadsheetApp.getUi()
@@ -58,7 +69,7 @@ function run(write) {
 
   if (write) {
     var answer = ui.alert(
-      'Push to ' + cfg.profile + '?',
+      'Push to ' + cfg.label + '?',
       sheet.rows.length +
         ' rows from "' +
         sheet.name +
@@ -302,13 +313,30 @@ function call(path, cfg, payload) {
   var response = UrlFetchApp.fetch(url, {
     method: 'post',
     contentType: 'application/json',
-    headers: { 'X-LDBC-Key': cfg.key },
+    headers: headers(cfg),
     payload: JSON.stringify(payload),
     muteHttpExceptions: true,
     followRedirects: true
   });
 
   return parse(response, url);
+}
+
+/**
+ * The key goes in its own header, never in Authorization.
+ *
+ * Authorization belongs to the web server on the staging sites, which stops
+ * the request at the door before WordPress ever sees it. The two never share
+ * a header, so a site can want both and get both.
+ */
+function headers(cfg) {
+  var out = { 'X-LDBC-Key': cfg.key };
+
+  if (cfg.user) {
+    out.Authorization = 'Basic ' + Utilities.base64Encode(cfg.user + ':' + cfg.pass);
+  }
+
+  return out;
 }
 
 function parse(response, url) {
@@ -319,6 +347,17 @@ function parse(response, url) {
   try {
     json = JSON.parse(body);
   } catch (e) {
+    // A door we never got through looks nothing like a WordPress answer, so
+    // say what it actually is rather than quoting a login page back.
+    if (code === 401) {
+      throw new Error(
+        'The site asked for a username and password before letting us in.\n\n' +
+          url +
+          '\n\nThis is the web server, not WordPress. Open Settings and fill in the ' +
+          'site password box for this site, or correct what is in it.'
+      );
+    }
+
     throw new Error(
       'The site replied with something that is not an answer we understand (HTTP ' +
         code +
@@ -352,7 +391,7 @@ function testConnection() {
     var info = parse(
       UrlFetchApp.fetch(url, {
         method: 'get',
-        headers: { 'X-LDBC-Key': cfg.key },
+        headers: headers(cfg),
         muteHttpExceptions: true,
         followRedirects: true
       }),
@@ -383,7 +422,7 @@ function testConnection() {
 function showReport(report, cfg, sheet, wrote, written) {
   var template = HtmlService.createTemplateFromFile('Results');
   template.report = report;
-  template.cfg = { profile: cfg.profile, host: hostOf(cfg.url) };
+  template.cfg = { profile: cfg.label, host: hostOf(cfg.url) };
   template.sheetName = sheet.name;
   template.wrote = wrote;
   template.written = written;
@@ -400,53 +439,85 @@ function showSetup() {
   var template = HtmlService.createTemplateFromFile('Setup');
   template.saved = settingsForForm();
 
-  SpreadsheetApp.getUi().showModalDialog(template.evaluate().setWidth(560).setHeight(600), 'LearnDash settings');
+  SpreadsheetApp.getUi().showModalDialog(template.evaluate().setWidth(560).setHeight(680), 'LearnDash settings');
 }
 
 function settings() {
   var store = PropertiesService.getDocumentProperties();
 
-  return {
-    profile: store.getProperty('profile') || 'staging',
-    detachMissing: store.getProperty('detach_missing') === 'yes',
-    staging: {
-      url: store.getProperty('staging_url') || '',
-      key: store.getProperty('staging_key') || ''
-    },
-    live: {
-      url: store.getProperty('live_url') || '',
-      key: store.getProperty('live_key') || ''
-    }
+  var saved = {
+    profile: profileOr(store.getProperty('profile'), 'dev'),
+    detachMissing: store.getProperty('detach_missing') === 'yes'
   };
+
+  PROFILES.forEach(function (profile) {
+    saved[profile.key] = {
+      label: profile.label,
+      url: store.getProperty(profile.key + '_url') || '',
+      key: store.getProperty(profile.key + '_key') || '',
+      user: store.getProperty(profile.key + '_user') || '',
+      pass: store.getProperty(profile.key + '_pass') || ''
+    };
+  });
+
+  return saved;
 }
 
-/** The settings screen never gets to see a saved key, only whether there is one. */
+function profileOr(value, fallback) {
+  var known = PROFILES.some(function (profile) {
+    return profile.key === value;
+  });
+
+  return known ? value : fallback;
+}
+
+/** The settings screen never gets to see a saved secret, only whether there is one. */
 function settingsForForm() {
   var saved = settings();
 
-  return {
+  var form = {
     profile: saved.profile,
     detachMissing: saved.detachMissing,
-    staging: { url: saved.staging.url, hasKey: !!saved.staging.key },
-    live: { url: saved.live.url, hasKey: !!saved.live.key }
+    profiles: []
   };
+
+  PROFILES.forEach(function (profile) {
+    var site = saved[profile.key];
+    form.profiles.push({
+      key: profile.key,
+      label: profile.label,
+      url: site.url,
+      hasKey: !!site.key,
+      user: site.user,
+      hasPass: !!site.pass
+    });
+  });
+
+  return form;
 }
 
 function saveSettings(form) {
   var props = {
-    profile: form.profile === 'live' ? 'live' : 'staging',
-    detach_missing: form.detachMissing ? 'yes' : 'no',
-    staging_url: String(form.stagingUrl || '').trim(),
-    live_url: String(form.liveUrl || '').trim()
+    profile: profileOr(form.profile, 'dev'),
+    detach_missing: form.detachMissing ? 'yes' : 'no'
   };
 
-  // An empty key box means keep the key already saved, so opening settings
-  // to change something else cannot quietly wipe it.
-  ['staging', 'live'].forEach(function (profile) {
-    var typed = String(form[profile + 'Key'] || '').trim();
-    if (typed) {
-      props[profile + '_key'] = typed;
-    }
+  var sites = form.sites || {};
+
+  PROFILES.forEach(function (profile) {
+    var typed = sites[profile.key] || {};
+
+    props[profile.key + '_url'] = String(typed.url || '').trim();
+    props[profile.key + '_user'] = String(typed.user || '').trim();
+
+    // An empty secret box means keep what is already saved, so opening
+    // settings to change something else cannot quietly wipe it.
+    ['key', 'pass'].forEach(function (secret) {
+      var value = String(typed[secret] || '').trim();
+      if (value) {
+        props[profile.key + '_' + secret] = value;
+      }
+    });
   });
 
   PropertiesService.getDocumentProperties().setProperties(props);
@@ -454,9 +525,10 @@ function saveSettings(form) {
   return settingsForForm();
 }
 
-function forgetKey(profile) {
+/** `what` is 'key' for the spreadsheet key, 'pass' for the site password. */
+function forgetSecret(profile, what) {
   PropertiesService.getDocumentProperties().deleteProperty(
-    (profile === 'live' ? 'live' : 'staging') + '_key'
+    profileOr(profile, 'dev') + '_' + (what === 'pass' ? 'pass' : 'key')
   );
 
   return settingsForForm();
@@ -468,14 +540,19 @@ function config() {
 
   if (!active.url || !active.key) {
     throw new Error(
-      'The ' + saved.profile + ' site is not set up yet.\n\nUse LearnDash then Settings to add its address and key.'
+      'The ' +
+        active.label +
+        ' site is not set up yet.\n\nUse LearnDash then Settings to add its address and key.'
     );
   }
 
   return {
     profile: saved.profile,
+    label: active.label,
     url: active.url,
     key: active.key,
+    user: active.user,
+    pass: active.pass,
     detachMissing: saved.detachMissing
   };
 }
