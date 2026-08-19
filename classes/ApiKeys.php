@@ -67,7 +67,7 @@ class ApiKeys {
    * @return array{id: string, name: string}|null
    */
   public static function verify(string $key): ?array {
-    if (!preg_match('/^' . self::PREFIX . '_([0-9a-f]{12})_([0-9a-f]{48})$/', $key, $parts)) {
+    if (!preg_match(self::shape(), $key, $parts)) {
       return null;
     }
 
@@ -91,6 +91,21 @@ class ApiKeys {
       'id' => $record['id'],
       'name' => $record['name'],
     ];
+  }
+
+  /**
+   * Is this the right shape to be one of our keys?
+   *
+   * Says nothing whatever about whether the key is real, and is not a way in.
+   * It is here so a caller can tell "the spreadsheet is knocking" from "some
+   * passer-by" without paying for a hash check.
+   */
+  public static function looksLikeKey(string $key): bool {
+    return (bool) preg_match(self::shape(), $key);
+  }
+
+  private static function shape(): string {
+    return '/^' . self::PREFIX . '_([0-9a-f]{12})_([0-9a-f]{48})$/';
   }
 
   /**

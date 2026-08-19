@@ -369,6 +369,21 @@ function parse(response, url) {
   }
 
   if (code >= 400) {
+    // WordPress is answering, so the address is right and we got through the
+    // door. It is the plugin's half that is not there.
+    if (json.code === 'rest_no_route') {
+      throw new Error(
+        'This site does not have the bulk create routes.\n\n' +
+          url +
+          '\n\nThe address and any site password are fine, WordPress answered. Either the ' +
+          'plugin is not active here, or it is an older copy from before the spreadsheet ' +
+          'routes existed, or something on the site hides the REST API from callers who ' +
+          'are not logged in.\n\nOpen that address in a browser to tell which. If it says ' +
+          'the key is not valid, the routes are there and only the key is wrong. If it ' +
+          'says no route again, the plugin needs installing or updating on this site.'
+      );
+    }
+
     throw new Error(json.message || 'The site said no (HTTP ' + code + ').');
   }
 

@@ -14,6 +14,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the server's own login box, sent as basic auth alongside the key.
 
 ### Fixed
+- **"Unknown username" from a site behind a front-door password.** The web
+  server asks for that password and then hands the same `Authorization` header
+  to PHP, where WordPress read it as an application password and refused the
+  request before any route of ours was reached. On our routes, and only for a
+  caller carrying a key of ours, that verdict is now ignored. The caller stays
+  logged out and is still judged by its key.
 - **Sheets without a quiz.** A sheet was only accepted if it had a `quiz_id` or
   `question_id` column, so a sheet of nothing but courses, lessons or topics was
   turned away as "not an upload sheet" by both the check and the spreadsheet

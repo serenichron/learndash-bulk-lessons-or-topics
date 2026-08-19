@@ -101,6 +101,16 @@ key, made on that site.
 web server, not WordPress. Fill in the site username and site password for
 that site in Settings, or correct what is in them.
 
+**"This site does not have the bulk create routes"** means WordPress answered
+but the plugin's half is missing. The plugin is not active on that site, or
+it is an older copy, or a security plugin there is hiding the REST API from
+callers who are not logged in. Each of the three sites needs the plugin.
+
+**"Unknown username. Check again or try your email address."** means the
+WordPress plugin on that site is older than this script. The site password
+reaches WordPress as well as the web server, and only a plugin that knows to
+ignore it will let the request through. Update the plugin on that site.
+
 **"Too many failed attempts"** means ten bad keys in a row from your
 connection. Wait fifteen minutes.
 

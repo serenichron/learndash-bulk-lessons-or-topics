@@ -10,8 +10,9 @@ use WP_REST_Response;
  * The door the spreadsheet knocks on.
  *
  * Three ways in. ping tells the script which site it is pointing at, which
- * matters when you keep a staging site and a live one. check reads a sheet
- * and reports. push builds it, and only after the same check has passed.
+ * matters when you keep two staging sites and a production one. check reads
+ * a sheet and reports. push builds it, and only after the same check has
+ * passed.
  *
  * Nothing here deletes. A push makes new content or updates existing content
  * by id, and that is the whole of it.
@@ -21,6 +22,52 @@ class Api {
 
   public function register(): void {
     add_action('rest_api_init', [$this, 'routes']);
+
+    // After WordPress has had its say about application passwords, priority
+    // 90, and cookies, priority 100.
+    add_filter('rest_authentication_errors', [$this, 'ignoreFrontDoorLogin'], 101);
+  }
+
+  /**
+   * The password on a staging site's front door is not a WordPress login.
+   *
+   * The web server asks for it, then hands the same Authorization header on
+   * to PHP, where WordPress reads it as an application password, fails to
+   * find a user by that name and turns the request away with "Unknown
+   * username" before any route of ours is reached. The header was never
+   * addressed to WordPress.
+   *
+   * So on our own routes, when something carrying a key of ours is knocking,
+   * that verdict is dropped. Dropping it grants nothing: the caller stays
+   * logged out and still has to get past authorise() on the strength of its
+   * key. All it buys is the right to be judged by the correct door.
+   *
+   * @param true|WP_Error|null $result
+   * @return true|WP_Error|null
+   */
+  public function ignoreFrontDoorLogin($result) {
+    if (!is_wp_error($result) || !$this->onOurRoute()) {
+      return $result;
+    }
+
+    $key = trim((string) ($_SERVER['HTTP_X_LDBC_KEY'] ?? ''));
+
+    return ApiKeys::looksLikeKey($key) ? null : $result;
+  }
+
+  /**
+   * Which route is being asked for, read before the request is dispatched
+   * and there is a WP_REST_Request to ask.
+   */
+  private function onOurRoute(): bool {
+    $wp = $GLOBALS['wp'] ?? null;
+    $route = $wp instanceof \WP ? $wp->query_vars['rest_route'] ?? '' : '';
+
+    if (!is_string($route) || $route === '') {
+      return false;
+    }
+
+    return strpos(ltrim($route, '/'), self::NS . '/') === 0;
   }
 
   public function routes(): void {
@@ -96,12 +143,14 @@ class Api {
   public function ping(WP_REST_Request $request): WP_REST_Response {
     $key = ApiKeys::verify($this->keyFrom($request));
 
-    return new WP_REST_Response($this->site() + [
-      'ok' => true,
-      'key_name' => $key['name'] ?? null,
-      'learndash' => function_exists('learndash_course_add_child_to_parent'),
-      'question_types' => class_exists('TSTPrep\LDAdvancedQuizzes\Questions'),
-    ]);
+    return new WP_REST_Response(
+      $this->site() + [
+        'ok' => true,
+        'key_name' => $key['name'] ?? null,
+        'learndash' => function_exists('learndash_course_add_child_to_parent'),
+        'question_types' => class_exists('TSTPrep\LDAdvancedQuizzes\Questions'),
+      ],
+    );
   }
 
   public function check(WP_REST_Request $request): WP_REST_Response {
