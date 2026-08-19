@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.4.0] - 2026-08-19
 
 ### Added
 - **A third site, and doors that ask for a password.** The spreadsheet script
@@ -25,6 +25,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   turned away as "not an upload sheet" by both the check and the spreadsheet
   script, though the importer had always built one correctly. Any one of the six
   id columns is now enough.
+- **Question order as a student sees it.** Reordering a sheet moved
+  `menu_order` and the `ld_quiz_questions` list, but the quiz itself still came
+  out in the old order. The pro mapper's `save()` never writes `sort` on an
+  update and picks its own on an insert, while the query behind the quiz orders
+  by `sort`. `savePro()` now calls `updateSort()`, the one method that writes
+  that column, whenever the stored value differs from the question's position.
+  Positions count from 1 rather than 0, matching LearnDash.
+
+### Changed
+- **An import no longer pays the cache purge on every row.** An eleven row
+  sheet took 42.08s, almost all of it in a cache plugin purging and re-warming
+  pages over HTTP after each save. New `BulkMode` holds the purge for the
+  length of a run and does it once at the end, defers term counting and drops
+  revisions, and restores all three in a `finally`. `menu_order` now rides
+  along with the title and content in the same save, via a new `extraArgs()`
+  hook on `Post`, halving the saves per question. The same sheet imports in
+  4.57s.
 
 ## [1.3.0] - 2026-08-12
 
