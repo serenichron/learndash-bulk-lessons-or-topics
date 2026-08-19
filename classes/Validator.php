@@ -92,19 +92,26 @@ class Validator {
 
   /**
    * Is this an upload sheet at all, or has someone pointed us at their notes.
+   *
+   * Any one id column is enough. A sheet of nothing but courses and lessons
+   * is a perfectly good sheet, and asking for a quiz column turned away the
+   * very thing this plugin was first written to do.
    */
   private function checkColumns(array $rows): void {
     $headers = array_keys(reset($rows));
-    $wanted = ['quiz_id', 'question_id'];
+    $wanted = array_map(static fn($level) => $level . '_id', array_keys(self::POST_TYPES));
     $found = array_intersect($wanted, $headers);
 
     if (empty($found)) {
       $this->problem(
         null,
         null,
-        __(
-          'This does not look like an upload sheet. It has no quiz_id or question_id column.',
-          'extended-learndash-bulk-create',
+        sprintf(
+          __(
+            'This does not look like an upload sheet. It has none of these columns: %s.',
+            'extended-learndash-bulk-create',
+          ),
+          implode(', ', $wanted),
         ),
       );
     }

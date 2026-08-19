@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- **Sheets without a quiz.** A sheet was only accepted if it had a `quiz_id` or
+  `question_id` column, so a sheet of nothing but courses, lessons or topics was
+  turned away as "not an upload sheet" by both the check and the spreadsheet
+  script, though the importer had always built one correctly. Any one of the six
+  id columns is now enough.
+
 ## [1.3.0] - 2026-08-12
 
 ### Added

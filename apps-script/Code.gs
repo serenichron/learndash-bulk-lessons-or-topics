@@ -203,12 +203,20 @@ function readSheet() {
     return String(h == null ? '' : h).trim();
   });
 
-  if (headers.indexOf('quiz_id') < 0 && headers.indexOf('question_id') < 0) {
+  // Any one id column is enough. A sheet of nothing but courses and lessons
+  // is a perfectly good sheet.
+  var idColumns = ['group_id', 'course_id', 'lesson_id', 'topic_id', 'quiz_id', 'question_id'];
+  var hasIdColumn = idColumns.some(function (column) {
+    return headers.indexOf(column) >= 0;
+  });
+
+  if (!hasIdColumn) {
     throw new Error(
       '"' +
         sheet.getName() +
-        '" does not look like an upload sheet. Its header row has no quiz_id or question_id column.\n\n' +
-        'Open the sheet you want to send, then try again.'
+        '" does not look like an upload sheet. Its header row has none of these columns:\n' +
+        idColumns.join(', ') +
+        '\n\nOpen the sheet you want to send, then try again.'
     );
   }
 
