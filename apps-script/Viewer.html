@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top" />
+    <style>
+      body {
+        font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+        font-size: 13px;
+        line-height: 1.5;
+        color: #202124;
+        margin: 0;
+        padding: 12px;
+      }
+      .site {
+        border-radius: 8px;
+        padding: 14px;
+        color: #fff;
+        margin-bottom: 14px;
+        transition: background 0.2s;
+      }
+      .site .name {
+        font-size: 19px;
+        font-weight: 700;
+        line-height: 1.2;
+      }
+      .site .host {
+        opacity: 0.9;
+        font-size: 12px;
+        margin-top: 4px;
+        word-break: break-all;
+      }
+      .where {
+        color: #5f6368;
+        font-size: 12px;
+        margin: 0 0 14px;
+        word-break: break-word;
+      }
+      .where strong {
+        color: #202124;
+        font-weight: 600;
+      }
+      h2 {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: #5f6368;
+        margin: 0 0 6px;
+      }
+      button {
+        font-family: inherit;
+        font-size: 13px;
+        width: 100%;
+        text-align: left;
+        padding: 8px 10px;
+        margin-bottom: 6px;
+        border-radius: 4px;
+        border: 1px solid #dadce0;
+        background: #fff;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 9px;
+      }
+      button:hover {
+        background: #f1f3f4;
+      }
+      button[disabled] {
+        cursor: default;
+        font-weight: 600;
+        background: #f1f3f4;
+      }
+      .dot {
+        width: 11px;
+        height: 11px;
+        border-radius: 50%;
+        flex: 0 0 auto;
+      }
+      .warn {
+        background: #fef7e0;
+        color: #7f6000;
+        border-radius: 4px;
+        padding: 8px 10px;
+        font-size: 12px;
+        margin-bottom: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="site" id="site">
+      <div class="name" id="label">...</div>
+      <div class="host" id="host"></div>
+    </div>
+
+    <p class="where">Tab <strong id="sheet"></strong></p>
+
+    <div id="notice"></div>
+
+    <h2>Show a different site</h2>
+    <div id="buttons"></div>
+
+    <script>
+      var last = '';
+
+      function draw(view) {
+        var stamp = JSON.stringify(view);
+        if (stamp === last) {
+          return;
+        }
+        last = stamp;
+
+        document.getElementById('site').style.background = view.colour;
+        document.getElementById('label').textContent = view.label;
+        document.getElementById('host').textContent = view.host;
+        document.getElementById('sheet').textContent = view.sheet;
+
+        var notice = document.getElementById('notice');
+        notice.innerHTML = '';
+
+        if (!view.upload) {
+          notice.innerHTML = '<div class="warn">This tab is not an upload sheet, so there is nothing to push from it.</div>';
+        } else if (!view.ready) {
+          notice.innerHTML = '<div class="warn">This site has no address or key yet. Open LearnDash, then Settings.</div>';
+        }
+
+        var buttons = document.getElementById('buttons');
+        buttons.innerHTML = '';
+
+        view.profiles.forEach(function (profile) {
+          var button = document.createElement('button');
+          button.innerHTML = '<span class="dot" style="background:' + profile.colour + '"></span>';
+          button.appendChild(document.createTextNode(profile.label));
+
+          if (profile.current) {
+            button.disabled = true;
+          } else {
+            button.onclick = function () {
+              button.disabled = true;
+              google.script.run.withSuccessHandler(poll)['view_' + profile.key]();
+            };
+          }
+
+          buttons.appendChild(button);
+        });
+      }
+
+      function poll() {
+        google.script.run.withSuccessHandler(draw).currentView();
+      }
+
+      poll();
+      // The sidebar is the only part of this that can follow you from tab to
+      // tab, so it keeps asking. Redrawing is skipped when nothing changed.
+      setInterval(poll, 1500);
+    </script>
+  </body>
+</html>

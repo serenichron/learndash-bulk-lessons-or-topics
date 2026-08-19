@@ -97,7 +97,7 @@
   </head>
   <body>
     <fieldset>
-      <legend>Which site am I pushing to</legend>
+      <legend>Whose ids am I showing</legend>
       <? saved.profiles.forEach(function (site) { ?>
       <div class="row">
         <input
@@ -110,7 +110,11 @@
         <label for="p-<?= site.key ?>" style="margin: 0"><?= site.label ?></label>
       </div>
       <? }); ?>
-      <p class="note">The menu always shows which one is selected, so a push to the wrong site takes real effort.</p>
+      <p class="note">
+        This decides which site's ids the id columns show, and which site Check talks to. It is not where a push
+        goes. The LearnDash menu has a separate Push for each site, and a push always says out loud where it is
+        going.
+      </p>
     </fieldset>
 
     <? saved.profiles.forEach(function (site) { ?>

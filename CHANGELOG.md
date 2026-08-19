@@ -5,6 +5,72 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-08-19
+
+### Added
+- **One sheet, three sites, and no way for an id to cross between them.** The
+  spreadsheet script pushed to whichever site was selected in settings, and the
+  id columns held that site's numbers. With three cloned sites that was a
+  loaded gun: a QA quiz id very often exists on production, as a quiz, with a
+  plausible title, so a push to the wrong site passed every check and quietly
+  overwrote the wrong content. Now every content row carries a `row_key` the
+  script writes once, a hidden `_ldbc_ids` ledger remembers which post that row
+  became on each site, and a push sends the ledger's ids for its target and
+  ignores the numbers in the cells entirely. The id columns became a view of
+  the ledger rather than the source of truth.
+- **A push button per site.** Dev staging, QA staging and Production each have
+  their own menu item, so the choice is made at the moment of the push rather
+  than in a settings box twenty minutes earlier. Each names the host, and says
+  how many rows would be updated and how many created, before it runs. A push
+  to production asks a second time.
+- **Every tab says which site it is showing.** Green, amber or red on the tab
+  itself, plus ` -D`, ` -Q` or ` -P` on its name, and a site panel that names
+  the site and the host in words and follows you from tab to tab. Each tab
+  remembers its own site, so two tabs can show different ones. The menu says
+  none of this on purpose: it is built when the spreadsheet opens and cannot be
+  rebuilt when you click a tab, so a site name in it would be right at first
+  and wrong from the second tab onwards.
+- **Adopting ids that already exist.** Content uploaded before any of this
+  existed comes under the ledger's care by pasting its ids in, pointing the tab
+  at the site they came from, and running Tools, Adopt the ids in this sheet.
+  Every id is checked on that site first through the new `lookup` route, so one
+  that is not there, or is a lesson where the column says quiz, is reported and
+  not written. There is a single-row version under Tools as well.
+- **`GET /wp-json/ldbc/v1/lookup`.** Answers what a batch of post ids are on
+  this site, up to two hundred at a time: whether each exists, its post type,
+  title and status. It is what makes adopting an id fail at the moment you
+  adopt it rather than on a push weeks later.
+- **A guard against numbers nobody recognises.** A number in an id column that
+  matches nothing in the ledger was typed or pasted by a person, and the script
+  will not guess what it meant. Nothing can be pushed or repainted until it is
+  adopted or cleared, because guessing wrong means either a duplicate or the
+  wrong post overwritten.
+- **A guard against copied spreadsheets and copied rows.** A copy of the
+  spreadsheet inherits every link and would edit the same posts as the
+  original, which is rarely what someone making a backup expects, so it is
+  noticed and you choose whether to keep the links or start clean. A copied
+  row carries its row key and would have two rows claiming one post on every
+  site, so it stops the run and Tools, Fix duplicate row keys, sorts it out.
+- **A site fingerprint.** The ledger records which host each site's ids came
+  from. Point a profile at a different address and the push stops, rather than
+  landing old ids on a new WordPress.
+- **A library, so twelve spreadsheets are one edit.** `Shim.gs` is eighty lines
+  of one-line handoffs and is the only file that goes in a spreadsheet.
+  Everything else lives in one standalone script attached as `LDBC`. See
+  `apps-script/README.md`.
+- **Tests.** The ledger, the resolving, the repainting and the tab painting run
+  against a small fake of Apps Script, 122 assertions, `npm run
+  test:apps-script`. One of them checks that the shim exposes exactly the names
+  the library's menu and dialogs call, so the two cannot drift apart.
+
+### Changed
+- **Settings picks which site a tab shows, not where a push goes.** The radio
+  buttons are still there and still choose a site, but a push now names its own
+  site in the menu.
+- **`lookup` answers for many ids at once.** It takes `ids` as a comma
+  separated list and returns one entry per id, so adopting a sheet of a
+  thousand pasted numbers is ten requests rather than a thousand.
+
 ## [1.4.0] - 2026-08-19
 
 ### Added

@@ -9,16 +9,20 @@ use WP_REST_Response;
 /**
  * The door the spreadsheet knocks on.
  *
- * Three ways in. ping tells the script which site it is pointing at, which
+ * Four ways in. ping tells the script which site it is pointing at, which
  * matters when you keep two staging sites and a production one. check reads
  * a sheet and reports. push builds it, and only after the same check has
- * passed.
+ * passed. lookup answers what a single post id is, so the spreadsheet can
+ * ask before it links a row to something that already exists.
  *
  * Nothing here deletes. A push makes new content or updates existing content
  * by id, and that is the whole of it.
  */
 class Api {
   public const NS = 'ldbc/v1';
+
+  /** How many ids one lookup will answer for. The script asks in batches of this. */
+  public const LOOKUP_LIMIT = 200;
 
   public function register(): void {
     add_action('rest_api_init', [$this, 'routes']);
@@ -109,6 +113,19 @@ class Api {
         ],
       ],
     ]);
+
+    register_rest_route(self::NS, '/lookup', [
+      'methods' => 'GET',
+      'callback' => [$this, 'lookup'],
+      'permission_callback' => [$this, 'authorise'],
+      'args' => [
+        'ids' => [
+          'required' => true,
+          'type' => 'string',
+          'description' => 'Post ids the spreadsheet is thinking of taking over, comma separated.',
+        ],
+      ],
+    ]);
   }
 
   /**
@@ -151,6 +168,34 @@ class Api {
         'question_types' => class_exists('TSTPrep\LDAdvancedQuizzes\Questions'),
       ],
     );
+  }
+
+  /**
+   * What are these posts on this site, if anything.
+   *
+   * The spreadsheet asks before it takes existing posts under its wing, so
+   * ids someone pasted in fail at the moment they are adopted rather than on
+   * a push weeks later. Answers in the order it was asked, one entry per id,
+   * whether or not the post is there.
+   */
+  public function lookup(WP_REST_Request $request): WP_REST_Response {
+    $asked = preg_split('/[s,]+/', (string) $request->get_param('ids'), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+    $ids = array_slice(array_values(array_unique(array_map('intval', $asked))), 0, self::LOOKUP_LIMIT);
+    $posts = [];
+
+    foreach ($ids as $id) {
+      $type = $id > 0 ? get_post_type($id) : false;
+
+      $posts[] = [
+        'id' => $id,
+        'found' => (bool) $type,
+        'post_type' => $type ?: null,
+        'title' => $type ? get_the_title($id) : null,
+        'status' => $type ? get_post_status($id) : null,
+      ];
+    }
+
+    return new WP_REST_Response($this->site() + ['ok' => true, 'posts' => $posts]);
   }
 
   public function check(WP_REST_Request $request): WP_REST_Response {

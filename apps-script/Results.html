@@ -96,8 +96,9 @@
     <div class="banner good">
       <strong><?= wrote ? 'Done' : 'Nothing wrong with this sheet' ?></strong>
       <?= wrote
-        ? 'Your sheet is on ' + cfg.host + '.' + (written ? ' ' + written + ' id cells were filled in for you.' : '')
-        : 'Checked ' + (s.rows || 0) + ' rows and found no problems. Nothing was written.' ?>
+        ? 'Your sheet is on ' + cfg.host + '.' +
+          (written ? ' ' + written + ' links were written down, and the id columns now show ' + cfg.profile + '.' : '')
+        : 'Checked ' + (s.rows || 0) + ' rows against ' + cfg.profile + ' and found no problems. Nothing was written.' ?>
     </div>
     <? } else { ?>
     <div class="banner bad">

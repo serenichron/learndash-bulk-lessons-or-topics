@@ -3,5 +3,8 @@
   "devDependencies": {
     "@prettier/plugin-php": "^0.19.2",
     "@types/jquery": "^3.5.33"
+  },
+  "scripts": {
+    "test:apps-script": "node apps-script/test/run.js"
   }
 }
