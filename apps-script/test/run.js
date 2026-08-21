@@ -45,6 +45,19 @@ function cell(sheet, row, header) {
   return sheet.getDataRange().getValues()[row - 1][col(sheet, header)];
 }
 
+/**
+ * Adopting is now two passes: a review that asks the site, then a confirm
+ * that asks it again so what is written is what is true at that moment. So
+ * the reply has to be queued twice.
+ */
+function adoptEverything(posts) {
+  const reply = () => ({ code: 200, body: JSON.stringify({ ok: true, url: 'https://live.example.com', posts }) });
+  H.fetchReplies.push(reply());
+  const review = adoptionReview();
+  H.fetchReplies.push(reply());
+  return { review, done: adoptConfirmed(review.rows.filter(r => r.adoptable).map(r => r.at)) };
+}
+
 // -------------------------------------------------------------------------
 section('A row key column is added once, and only for upload sheets');
 {
@@ -312,16 +325,15 @@ section('Ids pasted in by hand');
   H.props.live_key = 'ldbc_test';
 
   // The site disagrees about one of them.
-  H.answers.push(H.Button.OK);
-  H.fetchReplies.push({ code: 200, body: JSON.stringify({ ok: true, url: 'https://live.example.com', posts: [
+  const first = adoptEverything([
     { id: 500, found: true, post_type: 'sfwd-quiz', title: 'Mock 1', status: 'publish' },
     { id: 501, found: false, post_type: null, title: null, status: null },
-  ] }) });
-  adoptIds();
+  ]);
 
   ok('the good one was adopted', (readLedger().get(pasted.rows[0].key, 'quiz', 'live') || {}).id === 500);
   ok('the missing one was refused', readLedger().get(pasted.rows[0].key, 'question', 'live') === null);
-  ok('the refusal is reported', /1 adopted, 1 refused/.test(JSON.stringify(H.alerts)), H.alerts.slice(-1));
+  ok('the review named the missing one', first.review.rows.some(r => r.id === 501 && r.state === 'missing'));
+  ok('the count comes back', first.done.adopted === 1 && first.done.refused === 1, first.done);
 
   // Correct the bad id and adopt again.
   H.reset();
@@ -330,11 +342,9 @@ section('Ids pasted in by hand');
   H.props.live_key = 'ldbc_test';
   upload.getRange(2, question).setValue(502);
 
-  H.answers.push(H.Button.OK);
-  H.fetchReplies.push({ code: 200, body: JSON.stringify({ ok: true, url: 'https://live.example.com', posts: [
+  adoptEverything([
     { id: 502, found: true, post_type: 'sfwd-question', title: 'Q one', status: 'publish' },
-  ] }) });
-  adoptIds();
+  ]);
 
   ok('the corrected id was adopted', (readLedger().get(pasted.rows[0].key, 'question', 'live') || {}).id === 502);
 
@@ -389,7 +399,7 @@ section('The spreadsheet shim exposes everything the library needs');
 {
   const lib = fs.readFileSync(path.join(DIR, 'Code.gs'), 'utf8');
   const shim = fs.readFileSync(path.join(DIR, 'Shim.gs'), 'utf8');
-  const html = ['Setup.html', 'Results.html', 'Viewer.html']
+  const html = ['Setup.html', 'Results.html', 'Viewer.html', 'Adopt.html']
     .map(name => fs.readFileSync(path.join(DIR, name), 'utf8'))
     .join('\n');
 
@@ -403,24 +413,40 @@ section('The spreadsheet shim exposes everything the library needs');
     PROFILES.forEach(p => needed.add(m[1] + p.key));
   }
 
-  // Anything a dialog calls back into. A chained call is either the rest of
-  // the same line, or the start of its own line, which is what tells it
-  // apart from an ordinary call inside a handler body.
-  const plumbing = ['withSuccessHandler', 'withFailureHandler'];
+  // Anything a dialog calls back into.
+  //
+  // Walked rather than pattern-matched, because a chain runs across lines and
+  // its handler bodies are full of ordinary calls. Only a `.name(` at the
+  // chain's own bracket depth is a server call, and the chain ends at the
+  // first semicolon there.
+  const plumbing = ['withSuccessHandler', 'withFailureHandler', 'withUserObject'];
 
-  for (const chain of html.split('google.script.run').slice(1)) {
-    const sameLine = chain.split('\n')[0];
+  function chainCalls(text) {
+    const names = [];
+    let depth = 0;
 
-    for (const m of sameLine.matchAll(/^(?:\.[A-Za-z_]\w*\([^()]*\))*\.([A-Za-z_]\w*)\(/g)) {
-      if (!plumbing.includes(m[1])) needed.add(m[1]);
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+
+      if ('([{'.includes(c)) depth++;
+      else if (')]}'.includes(c)) depth--;
+      else if (c === ';' && depth === 0) break;
+      else if (c === '.' && depth === 0) {
+        const m = /^\.([A-Za-z_]\w*)\(/.exec(text.slice(i));
+        if (m) names.push(m[1]);
+      }
     }
 
-    for (const m of chain.matchAll(/^\s*\.([A-Za-z_]\w*)\(/gm)) {
-      if (!plumbing.includes(m[1])) needed.add(m[1]);
+    return names;
+  }
+
+  for (const chain of html.split('google.script.run').slice(1)) {
+    for (const name of chainCalls(chain)) {
+      if (!plumbing.includes(name)) needed.add(name);
     }
 
     // The site panel picks its handler by name, one per site.
-    for (const m of chain.matchAll(/\['(view_|push_)'\s*\+\s*profile\.key\]/g)) {
+    for (const m of chain.slice(0, 400).matchAll(/\['(view_|push_)'\s*\+\s*profile\.key\]/g)) {
       PROFILES.forEach(p => needed.add(m[1] + p.key));
     }
   }
@@ -460,12 +486,10 @@ section('The view can still be moved while ids are waiting to be adopted');
   // Adopting them for production is now reachable, which was the whole point.
   H.props.live_url = 'https://live.example.com';
   H.props.live_key = 'ldbc_test';
-  H.answers.push(H.Button.OK);
-  H.fetchReplies.push({ code: 200, body: JSON.stringify({ ok: true, url: 'https://live.example.com', posts: [
+  adoptEverything([
     { id: 1627600, found: true, post_type: 'sfwd-quiz', title: 'Writing Practice Test 2', status: 'publish' },
     { id: 1627601, found: true, post_type: 'sfwd-question', title: 'Build a Sentence', status: 'publish' },
-  ] }) });
-  adoptIds();
+  ]);
 
   const sheet = readSheet();
   ok('both are now production links', unadoptedNumbers(sheet.rows, readLedger()).length === 0);
@@ -604,6 +628,77 @@ section('A sheet Check has never touched still guards its ids');
   const done = repaint('qa');
   ok('a notes sheet is skipped', done.skipped === true);
   ok('and gets no row_key column', col(notes, 'row_key') < 0);
+}
+
+// -------------------------------------------------------------------------
+section('The adopt screen puts the titles side by side');
+{
+  const HEAD = ['quiz_id', 'question_id', 'quiz_post_title', 'question_post_title', 'question_type'];
+  const { upload } = freshBook([
+    HEAD,
+    [700, 701, 'Writing Practice Test 14', 'Build a Sentence 111', 'single'],
+    ['PREV', 702, '', 'Build a Sentence 112', 'single'],
+    ['PREV', 703, '', 'Write an Email 13', 'single'],
+    ['PREV', 704, '', 'Write for an Academic Discussion', 'single'],
+  ]);
+
+  H.props.profile = 'live';
+  H.props.live_url = 'https://live.example.com';
+  H.props.live_key = 'ldbc_test';
+
+  H.fetchReplies.push({ code: 200, body: JSON.stringify({ ok: true, url: 'https://live.example.com', posts: [
+    { id: 700, found: true, post_type: 'sfwd-quiz', title: '  writing   practice test 14 ', status: 'publish' },
+    { id: 701, found: true, post_type: 'sfwd-question', title: 'Build a Sentence 111', status: 'publish' },
+    { id: 702, found: true, post_type: 'sfwd-lessons', title: 'Some lesson', status: 'publish' },
+    { id: 703, found: true, post_type: 'sfwd-question', title: 'Something else entirely', status: 'draft' },
+    { id: 704, found: false, post_type: null, title: null, status: null },
+  ] }) });
+
+  const review = adoptionReview();
+
+  ok('every number is reviewed', review.rows.length === 5, review.rows.length);
+  ok('it names the site and host', review.label === 'Production' && review.host === 'live.example.com');
+
+  const by = {};
+  review.rows.forEach(r => { by[r.id] = r; });
+
+  ok('a title differing only in case and spacing counts as the same', by[700].state === 'same', by[700]);
+  ok('an exact match counts as the same', by[701].state === 'same');
+  ok('a lesson in a question column is the wrong type', by[702].state === 'wrong-type');
+  ok('a real question with another title just differs', by[703].state === 'differs');
+  ok('a missing post is missing', by[704].state === 'missing');
+
+  ok('both titles are carried for a human to read', by[703].siteTitle === 'Something else entirely' && by[703].sheetTitle === 'Write an Email 13');
+  ok('the status is carried too', by[703].status === 'draft');
+
+  ok('only the sane ones can be adopted', review.rows.filter(r => r.adoptable).map(r => r.id).sort().join() === '700,701,703');
+  ok('the counts add up', review.counts.same === 2 && review.counts.differs === 1 && review.counts.missing === 1 && review.counts.wrongType === 1, review.counts);
+
+  ok('trouble sorts to the top', review.rows[0].state === 'missing' || review.rows[0].state === 'wrong-type', review.rows.map(r => r.state));
+  ok('matches sort to the bottom', review.rows[review.rows.length - 1].state === 'same', review.rows.map(r => r.state));
+
+  // Now adopt, but untick the one whose title disagrees.
+  H.fetchReplies.push({ code: 200, body: JSON.stringify({ ok: true, url: 'https://live.example.com', posts: [
+    { id: 700, found: true, post_type: 'sfwd-quiz', title: 'writing practice test 14', status: 'publish' },
+    { id: 701, found: true, post_type: 'sfwd-question', title: 'Build a Sentence 111', status: 'publish' },
+    { id: 702, found: true, post_type: 'sfwd-lessons', title: 'Some lesson', status: 'publish' },
+    { id: 703, found: true, post_type: 'sfwd-question', title: 'Something else entirely', status: 'draft' },
+    { id: 704, found: false, post_type: null, title: null, status: null },
+  ] }) });
+
+  const keep = review.rows.filter(r => r.adoptable && r.id !== 703).map(r => r.at);
+  const done = adoptConfirmed(keep);
+
+  ok('the ticked ones were written', done.adopted === 2, done);
+  ok('the unticked one was counted as skipped', done.skipped === 1, done);
+  ok('the site refusals are counted apart', done.refused === 2, done);
+
+  const ledger = readLedger();
+  const rows = readSheet().rows;
+  ok('700 is a production link now', (ledger.get(rows[0].key, 'quiz', 'live') || {}).id === 700);
+  ok('703 was left alone', ledger.get(rows[2].key, 'question', 'live') === null);
+  ok('the sheet still holds the untouched numbers', cell(upload, 4, 'question_id') === 703);
+  ok('and says so rather than repainting over them', /never written/.test(done.trouble), done.trouble.slice(0, 60));
 }
 
 // -------------------------------------------------------------------------

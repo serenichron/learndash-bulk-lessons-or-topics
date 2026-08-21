@@ -1360,27 +1360,60 @@ function cellTarget() {
  *
  * This is how content that was uploaded before any of this existed comes
  * under the ledger's care. You paste the ids that site gave you, point the
- * viewing control at it, and run this. Every id is checked against that site
- * first, so a number that is not there, or is a lesson where the column says
- * quiz, is reported and not written.
+ * tab at the site they came from, and run this.
+ *
+ * Two things are checked and only two. Does the post exist there, and is it
+ * the right kind of thing. A title is not a check, because you adopt an id
+ * precisely so you can overwrite that content, and the sheet holding a newer
+ * title than the site is the normal case rather than a fault. So the titles
+ * are put side by side and you decide, which is the only thing that catches
+ * a real id pointing at an entirely different quiz.
  */
 function adoptIds() {
   var ui = SpreadsheetApp.getUi();
-  var view = viewProfile();
-  var cfg, sheet, ledger;
+  var review;
 
   if (!guardCopy()) {
     return;
   }
 
   try {
-    cfg = config(view);
-    sheet = readSheet();
-    ledger = readLedger();
+    review = adoptionReview();
   } catch (e) {
     ui.alert(String(e.message || e));
     return;
   }
+
+  if (!review.rows.length) {
+    ui.alert(
+      'Nothing to adopt',
+      'Every number in this sheet is already known as a ' + review.label + ' id.',
+      ui.ButtonSet.OK
+    );
+    return;
+  }
+
+  var template = HtmlService.createTemplateFromFile('Adopt');
+  template.review = review;
+
+  ui.showModalDialog(
+    template.evaluate().setWidth(920).setHeight(640),
+    'Adopt ' + review.rows.length + ' ids as ' + review.label
+  );
+}
+
+/**
+ * Everything the adopt screen needs, worked out fresh.
+ *
+ * Built again when you press the button as well as when the screen opens, so
+ * what is written is what the sheet and the site say at that moment rather
+ * than what they said while you were reading.
+ */
+function adoptionReview() {
+  var view = viewProfile();
+  var cfg = config(view);
+  var sheet = readSheet();
+  var ledger = readLedger();
 
   var candidates = [];
   var elsewhere = 0;
@@ -1407,113 +1440,151 @@ function adoptIds() {
         elsewhere++;
       }
 
-      candidates.push({ row: r.row, key: r.key, level: level, id: Number(raw), replaces: here ? here.id : null });
+      candidates.push({
+        row: r.row,
+        key: r.key,
+        level: level,
+        id: Number(raw),
+        replaces: here ? here.id : null,
+        sheetTitle: String(r.data[level + '_post_title'] == null ? '' : r.data[level + '_post_title']).trim()
+      });
     });
   });
 
-  if (!candidates.length) {
-    ui.alert(
-      'Nothing to adopt',
-      'Every number in this sheet is already known as a ' + labelOf(view) + ' id.',
-      ui.ButtonSet.OK
-    );
-    return;
+  var rows = [];
+
+  if (candidates.length) {
+    var wanted = {};
+    candidates.forEach(function (c) {
+      wanted[c.id] = true;
+    });
+
+    var posts = lookupPosts(cfg, Object.keys(wanted));
+
+    rows = candidates.map(function (c) {
+      var post = posts[String(c.id)] || null;
+      var state;
+
+      if (!post || !post.found) {
+        state = 'missing';
+      } else if (post.post_type !== POST_TYPES[c.level]) {
+        state = 'wrong-type';
+      } else if (sameTitle(post.title, c.sheetTitle)) {
+        state = 'same';
+      } else {
+        state = 'differs';
+      }
+
+      return {
+        at: c.row + '|' + c.level + '|' + c.id,
+        row: c.row,
+        key: c.key,
+        level: c.level,
+        id: c.id,
+        replaces: c.replaces,
+        sheetTitle: c.sheetTitle,
+        siteTitle: post && post.found ? post.title : '',
+        siteType: post && post.found ? post.post_type : '',
+        status: post && post.found ? post.status : '',
+        state: state,
+        adoptable: state === 'same' || state === 'differs'
+      };
+    });
+
+    // Worst first. What cannot be adopted at all, then what disagrees, then
+    // the long tail that matches and needs no thought.
+    var order = { missing: 0, 'wrong-type': 1, differs: 2, same: 3 };
+    rows.sort(function (a, b) {
+      return order[a.state] - order[b.state] || a.row - b.row || (a.level < b.level ? -1 : 1);
+    });
   }
 
-  var replacing = candidates.filter(function (c) {
-    return c.replaces !== null;
+  return {
+    profile: view,
+    label: labelOf(view),
+    host: hostOf(cfg.url),
+    url: cfg.url,
+    sheet: sheet.name,
+    elsewhere: elsewhere,
+    rows: rows,
+    counts: {
+      missing: countState(rows, 'missing'),
+      wrongType: countState(rows, 'wrong-type'),
+      differs: countState(rows, 'differs'),
+      same: countState(rows, 'same'),
+      replacing: rows.filter(function (r) {
+        return r.replaces !== null && r.adoptable;
+      }).length
+    }
+  };
+}
+
+function countState(rows, state) {
+  return rows.filter(function (r) {
+    return r.state === state;
   }).length;
+}
 
-  var answer = ui.alert(
-    'Adopt ' + candidates.length + ' ids as ' + labelOf(view) + '?',
-    'Every one of these will be checked on ' +
-      hostOf(cfg.url) +
-      ' first. The ones that are really there, and really the right kind of thing, become ' +
-      labelOf(view) +
-      ' links.\n\n' +
-      (elsewhere
-        ? elsewhere + ' of them are ids this sheet already holds for a different site. If that is because the ' +
-          'viewing control is pointed at the wrong site, stop now and change it.\n\n'
-        : '') +
-      (replacing ? replacing + ' rows are already linked to something else on ' + labelOf(view) + ', and would be repointed.\n\n' : '') +
-      'After this, a push to ' +
-      labelOf(view) +
-      ' updates these posts instead of making new ones.',
-    ui.ButtonSet.OK_CANCEL
-  );
+/** Close enough to be the same title, ignoring case and stray spacing. */
+function sameTitle(a, b) {
+  return normaliseTitle(a) !== '' && normaliseTitle(a) === normaliseTitle(b);
+}
 
-  if (answer !== ui.Button.OK) {
-    return;
-  }
+function normaliseTitle(text) {
+  return String(text == null ? '' : text)
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
 
+/**
+ * Write down the ones the adopt screen was left ticked.
+ *
+ * `chosen` is a list of "row|level|id". The sheet and the site are asked
+ * again rather than trusting what the screen was showing, and anything that
+ * no longer lines up is simply not in the new list and so is not written.
+ */
+function adoptConfirmed(chosen) {
   var wanted = {};
-  candidates.forEach(function (c) {
-    wanted[c.id] = true;
+  (chosen || []).forEach(function (at) {
+    wanted[String(at)] = true;
   });
 
-  var posts;
-  try {
-    posts = lookupPosts(cfg, Object.keys(wanted));
-  } catch (e) {
-    ui.alert('Could not ask the site', String(e.message || e), ui.ButtonSet.OK);
-    return;
-  }
-
+  var review = adoptionReview();
   var entries = [];
-  var refused = [];
+  var skipped = 0;
 
-  candidates.forEach(function (c) {
-    var post = posts[String(c.id)];
-
-    if (!post || !post.found) {
-      refused.push('row ' + c.row + ', ' + c.level + '_id ' + c.id + ': not on this site');
+  review.rows.forEach(function (r) {
+    if (!r.adoptable) {
       return;
     }
 
-    if (post.post_type !== POST_TYPES[c.level]) {
-      refused.push('row ' + c.row + ', ' + c.level + '_id ' + c.id + ': that is a ' + post.post_type);
+    if (!wanted[r.at]) {
+      skipped++;
       return;
     }
 
-    entries.push({ key: c.key, level: c.level, profile: view, siteUrl: cfg.url, id: c.id });
+    entries.push({ key: r.key, level: r.level, profile: review.profile, siteUrl: review.url, id: r.id });
   });
 
   if (entries.length) {
     writeLedgerEntries(entries);
   }
 
-  if (refused.length) {
-    ui.alert(
-      entries.length + ' adopted, ' + refused.length + ' refused',
-      'These were left alone because ' +
-        hostOf(cfg.url) +
-        ' does not agree with them:\n\n' +
-        refused.slice(0, 15).join('\n') +
-        (refused.length > 15 ? '\nand ' + (refused.length - 15) + ' more' : '') +
-        '\n\nThe sheet still holds those numbers, so nothing can be pushed until they are sorted. ' +
-        'Either correct them, or replace them with CREATE.',
-      ui.ButtonSet.OK
-    );
-    return;
-  }
-
+  var trouble = '';
   try {
-    repaint(view);
+    repaint(review.profile);
   } catch (e) {
-    ui.alert(String(e.message || e));
-    return;
+    trouble = String(e.message || e);
   }
 
-  ui.alert(
-    'Adopted',
-    entries.length +
-      ' ids are now ' +
-      labelOf(view) +
-      ' links. A push to ' +
-      labelOf(view) +
-      ' will update them rather than make new ones.',
-    ui.ButtonSet.OK
-  );
+  return {
+    adopted: entries.length,
+    skipped: skipped,
+    refused: review.counts.missing + review.counts.wrongType,
+    label: review.label,
+    trouble: trouble
+  };
 }
 
 /**

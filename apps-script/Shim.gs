@@ -74,10 +74,14 @@ function repaintNow() {
   LDBC.repaintNow();
 }
 
-// Called by the settings screen and the site panel, from the browser, so
-// these have to return their answer rather than just doing something.
+// Called by the settings screen, the site panel and the adopt screen, from
+// the browser, so these have to return their answer rather than just doing
+// something.
 function currentView() {
   return LDBC.currentView();
+}
+function adoptConfirmed(chosen) {
+  return LDBC.adoptConfirmed(chosen);
 }
 function saveSettings(form) {
   return LDBC.saveSettings(form);

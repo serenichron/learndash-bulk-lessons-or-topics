@@ -86,15 +86,16 @@ that Apps Script creates inside a spreadsheet. A script bound to a sheet belongs
 to that sheet: move or delete the sheet and every spreadsheet using the library
 breaks, and anyone who needs the library needs access to that sheet as well.
 
-It needs four files:
+It needs five files:
 
 - paste `Code.gs` over the editor's own Code.gs
 - press the plus next to Files, choose HTML, name it `Setup`, paste `Setup.html` into it
 - again, choose HTML, name it `Results`, paste `Results.html` into it
 - again, choose HTML, name it `Viewer`, paste `Viewer.html` into it
+- again, choose HTML, name it `Adopt`, paste `Adopt.html` into it
 
-Apps Script adds the `.html` itself, so name them `Setup`, `Results` and
-`Viewer`, not `Setup.html`. The names are case sensitive.
+Apps Script adds the `.html` itself, so name them `Setup`, `Results`, `Viewer`
+and `Adopt`, not `Setup.html`. The names are case sensitive.
 
 Save.
 
@@ -180,7 +181,7 @@ working on the script, everyone else's pinned to a version.
 ### The paste-it-in way, for one spreadsheet
 
 Open the spreadsheet. Extensions, then Apps Script. Paste `Code.gs` over
-whatever is there, add `Setup`, `Results` and `Viewer` as HTML files as in step
+whatever is there, add `Setup`, `Results`, `Viewer` and `Adopt` as HTML files as in step
 1, save, reload the spreadsheet.
 
 Ignore `Shim.gs` and `spreadsheet-appsscript.json`. Both exist only for the
@@ -228,12 +229,22 @@ If content was uploaded before any of this existed, paste its ids into the id
 columns, point the tab at the site they came from, and use LearnDash, Tools,
 Adopt the ids in this sheet.
 
-Two things are checked on that site, and only two. Does the post exist, and is
-it the right kind of thing. A number in `quiz_id` must be a quiz, not a lesson.
-Anything else is reported and not written.
+A review screen opens first. One line per number, showing the row, the level,
+the id, what the site calls that post, what your sheet calls it, and its status.
+Trouble sorts to the top and the ones that agree sit at the bottom.
 
-Titles are not checked. A real quiz id that is the wrong quiz will be accepted,
-and the next push overwrites that quiz. Spot-check a few titles before pushing.
+Two things are checked for you, and only two. Does the post exist on that site,
+and is it the right kind of thing. A number in `quiz_id` must be a quiz, not a
+lesson. Anything else cannot be ticked and is not written.
+
+The titles are the part you check. They are not a test the script can run,
+because you adopt an id precisely so you can overwrite that content, so the
+sheet holding a newer title than the site is the normal case rather than a
+fault. What the two titles catch is the id that points at an entirely different
+quiz, and those do not read as near-misses of each other.
+
+Untick anything that looks wrong. Unticked rows keep their numbers in the sheet
+and are simply not written.
 
 Until they are adopted, nothing can be pushed or repainted. A number the script
 did not write could mean two different things, and guessing wrong means either a

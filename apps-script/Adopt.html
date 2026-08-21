@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top" />
+    <style>
+      body {
+        font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+        font-size: 13px;
+        line-height: 1.45;
+        color: #202124;
+        margin: 0;
+        padding: 16px 18px 78px;
+      }
+      p {
+        margin: 0 0 10px;
+      }
+      .lede {
+        color: #5f6368;
+      }
+      .counts {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px 8px;
+        margin: 0 0 14px;
+        padding: 0;
+        list-style: none;
+      }
+      .counts li {
+        background: #f1f3f4;
+        border-radius: 12px;
+        padding: 3px 11px;
+      }
+      .counts li.bad {
+        background: #fce8e6;
+        color: #a50e0e;
+      }
+      .counts li.warn {
+        background: #fef7e0;
+        color: #7f6000;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+      }
+      th {
+        text-align: left;
+        font-weight: 500;
+        color: #5f6368;
+        border-bottom: 1px solid #dadce0;
+        padding: 6px 8px 6px 0;
+        position: sticky;
+        top: 0;
+        background: #fff;
+        white-space: nowrap;
+      }
+      td {
+        padding: 7px 8px 7px 0;
+        border-bottom: 1px solid #f1f3f4;
+        vertical-align: top;
+      }
+      td.num {
+        white-space: nowrap;
+        font-variant-numeric: tabular-nums;
+        color: #5f6368;
+        width: 1%;
+      }
+      td.title {
+        width: 38%;
+      }
+      tr.missing td,
+      tr.wrong-type td {
+        background: #fce8e6;
+      }
+      tr.differs td {
+        background: #fef7e0;
+      }
+      .why {
+        display: block;
+        font-size: 12px;
+        color: #a50e0e;
+      }
+      .quiet {
+        color: #9aa0a6;
+      }
+      .bar {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: #fff;
+        border-top: 1px solid #dadce0;
+        padding: 12px 18px;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      button {
+        font-family: inherit;
+        font-size: 13px;
+        padding: 7px 16px;
+        border-radius: 4px;
+        border: 1px solid #dadce0;
+        background: #fff;
+        cursor: pointer;
+      }
+      button.primary {
+        background: #1a73e8;
+        border-color: #1a73e8;
+        color: #fff;
+      }
+      button[disabled] {
+        opacity: 0.5;
+        cursor: default;
+      }
+      #status {
+        color: #5f6368;
+      }
+      .done {
+        background: #e6f4ea;
+        color: #137333;
+        border-radius: 6px;
+        padding: 12px 14px;
+        margin-bottom: 12px;
+      }
+      .done.bad {
+        background: #fce8e6;
+        color: #a50e0e;
+      }
+    </style>
+  </head>
+  <body>
+    <? var counts = review.counts; ?>
+    <? var refused = counts.missing + counts.wrongType; ?>
+
+    <div id="result"></div>
+
+    <div id="review">
+      <p class="lede">
+        These numbers are in "<?= review.sheet ?>" and are not yet known as <?= review.label ?> ids.
+        <?= review.host ?> was asked what each one is. Adopting means a push to <?= review.label ?> updates
+        that post instead of making a new one.
+      </p>
+
+      <ul class="counts">
+        <? if (counts.missing) { ?><li class="bad"><?= counts.missing ?> not on this site</li><? } ?>
+        <? if (counts.wrongType) { ?><li class="bad"><?= counts.wrongType ?> the wrong kind of thing</li><? } ?>
+        <? if (counts.differs) { ?><li class="warn"><?= counts.differs ?> with a different title</li><? } ?>
+        <li><?= counts.same ?> with a matching title</li>
+        <? if (counts.replacing) { ?><li class="warn"><?= counts.replacing ?> already linked to something else</li><? } ?>
+        <? if (review.elsewhere) { ?><li class="warn"><?= review.elsewhere ?> are ids this sheet holds for another site</li><? } ?>
+      </ul>
+
+      <? if (review.elsewhere) { ?>
+      <p class="lede">
+        Some of these are already this sheet's ids for a different site. If that is because the tab is
+        pointed at the wrong site, close this and change it.
+      </p>
+      <? } ?>
+
+      <p class="lede">
+        A different title is not proof of anything. You adopt an id so you can overwrite that content, so
+        the sheet being newer than the site is normal. It is worth a look when the two titles are not
+        near-misses of each other.
+      </p>
+
+      <table>
+        <tr>
+          <th style="width: 1%"><input type="checkbox" id="all" checked /></th>
+          <th>Row</th>
+          <th>Level</th>
+          <th>Id</th>
+          <th>On <?= review.host ?></th>
+          <th>In your sheet</th>
+          <th>Status</th>
+        </tr>
+        <? for (var i = 0; i < review.rows.length; i++) { var r = review.rows[i]; ?>
+        <tr class="<?= r.state ?>">
+          <td class="num">
+            <? if (r.adoptable) { ?>
+            <input type="checkbox" class="pick" value="<?= r.at ?>" checked />
+            <? } ?>
+          </td>
+          <td class="num"><?= r.row ?></td>
+          <td class="num"><?= r.level ?></td>
+          <td class="num"><?= r.id ?></td>
+          <td class="title">
+            <?= r.siteTitle ? r.siteTitle : '' ?>
+            <? if (r.state === 'missing') { ?>
+            <span class="why">There is no post with this id here.</span>
+            <? } else if (r.state === 'wrong-type') { ?>
+            <span class="why">This is a <?= r.siteType ?>, not a <?= r.level ?>.</span>
+            <? } ?>
+          </td>
+          <td class="title">
+            <?= r.sheetTitle ? r.sheetTitle : '' ?>
+            <? if (!r.sheetTitle) { ?><span class="quiet">no title in this row</span><? } ?>
+          </td>
+          <td class="num">
+            <?= r.status ? r.status : '' ?>
+            <? if (r.replaces !== null) { ?>
+            <span class="why">was <?= r.replaces ?></span>
+            <? } ?>
+          </td>
+        </tr>
+        <? } ?>
+      </table>
+    </div>
+
+    <div class="bar" id="bar">
+      <button class="primary" id="go" onclick="adopt()">Adopt the ticked ones</button>
+      <button onclick="google.script.host.close()">Cancel</button>
+      <span id="status"></span>
+    </div>
+
+    <script>
+      var refused = <?= refused ?>;
+
+      function picked() {
+        return Array.prototype.filter
+          .call(document.querySelectorAll('.pick'), function (box) {
+            return box.checked;
+          })
+          .map(function (box) {
+            return box.value;
+          });
+      }
+
+      function count() {
+        var n = picked().length;
+        document.getElementById('go').disabled = n === 0;
+        document.getElementById('go').textContent = n === 1 ? 'Adopt 1 id' : 'Adopt ' + n + ' ids';
+      }
+
+      document.getElementById('all').onchange = function () {
+        var on = this.checked;
+        Array.prototype.forEach.call(document.querySelectorAll('.pick'), function (box) {
+          box.checked = on;
+        });
+        count();
+      };
+
+      Array.prototype.forEach.call(document.querySelectorAll('.pick'), function (box) {
+        box.onchange = count;
+      });
+
+      function adopt() {
+        document.getElementById('go').disabled = true;
+        document.getElementById('status').textContent = 'Writing...';
+
+        google.script.run
+          .withSuccessHandler(finished)
+          .withFailureHandler(function (e) {
+            document.getElementById('status').textContent = String(e.message || e);
+            count();
+          })
+          .adoptConfirmed(picked());
+      }
+
+      function finished(done) {
+        document.getElementById('review').style.display = 'none';
+        document.getElementById('bar').innerHTML =
+          '<button class="primary" onclick="google.script.host.close()">Close</button>';
+
+        var left = done.skipped + done.refused;
+        var box = document.createElement('div');
+        box.className = 'done' + (left ? ' bad' : '');
+
+        var lines = [
+          '<strong>' + done.adopted + ' ids are now ' + done.label + ' links.</strong>',
+          'A push to ' + done.label + ' will update those posts rather than make new ones.'
+        ];
+
+        if (left) {
+          lines.push(
+            '<br />' +
+              left +
+              ' numbers were left alone, ' +
+              done.refused +
+              ' refused by the site and ' +
+              done.skipped +
+              ' unticked by you. The sheet still holds them, so nothing can be pushed until they are ' +
+              'adopted or replaced with CREATE.'
+          );
+        }
+
+        if (done.trouble) {
+          lines.push('<br />' + done.trouble.split('\n')[0]);
+        }
+
+        box.innerHTML = lines.join('<br />');
+        document.getElementById('result').appendChild(box);
+      }
+
+      count();
+    </script>
+  </body>
+</html>

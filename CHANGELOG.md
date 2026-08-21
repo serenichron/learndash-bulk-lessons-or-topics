@@ -32,10 +32,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and wrong from the second tab onwards.
 - **Adopting ids that already exist.** Content uploaded before any of this
   existed comes under the ledger's care by pasting its ids in, pointing the tab
-  at the site they came from, and running Tools, Adopt the ids in this sheet.
-  Every id is checked on that site first through the new `lookup` route, so one
-  that is not there, or is a lesson where the column says quiz, is reported and
-  not written. There is a single-row version under Tools as well.
+  at the site they came from, and running Tools, Adopt the ids in this sheet. A
+  review screen shows one line per number: the row, the level, the id, what the
+  site calls that post, what the sheet calls it, and its status. What is not
+  there, or is a lesson where the column says quiz, cannot be ticked. Trouble
+  sorts to the top and the rest can be unticked one by one.
+
+  The titles are put side by side rather than compared, because you adopt an id
+  precisely so you can overwrite that content, so the sheet being newer than the
+  site is the normal case rather than a fault. What two titles catch is the real
+  id pointing at an entirely different quiz, and those never read as near-misses
+  of each other. There is a single-row version under Tools as well.
 - **`GET /wp-json/ldbc/v1/lookup`.** Answers what a batch of post ids are on
   this site, up to two hundred at a time: whether each exists, its post type,
   title and status. It is what makes adopting an id fail at the moment you
@@ -59,7 +66,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Everything else lives in one standalone script attached as `LDBC`. See
   `apps-script/README.md`.
 - **Tests.** The ledger, the resolving, the repainting and the tab painting run
-  against a small fake of Apps Script, 122 assertions, `npm run
+  against a small fake of Apps Script, 143 assertions, `npm run
   test:apps-script`. One of them checks that the shim exposes exactly the names
   the library's menu and dialogs call, so the two cannot drift apart.
 
