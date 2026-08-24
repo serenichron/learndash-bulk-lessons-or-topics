@@ -135,11 +135,23 @@
     <div id="result"></div>
 
     <div id="review">
+      <? if (review.source) { ?>
+      <p class="lede">
+        These are the ids this sheet holds for <?= review.sourceLabel ?>, tried against <?= review.label ?>.
+        <?= review.host ?> was asked what each one is. Adopting means a push to <?= review.label ?> updates
+        that post instead of making a new one.
+      </p>
+      <p class="lede">
+        You did not choose these numbers, the script did, so anything whose title disagrees starts unticked.
+        Tick it only if you know it is the same content under a different name.
+      </p>
+      <? } else { ?>
       <p class="lede">
         These numbers are in "<?= review.sheet ?>" and are not yet known as <?= review.label ?> ids.
         <?= review.host ?> was asked what each one is. Adopting means a push to <?= review.label ?> updates
         that post instead of making a new one.
       </p>
+      <? } ?>
 
       <ul class="counts">
         <? if (counts.missing) { ?><li class="bad"><?= counts.missing ?> not on this site</li><? } ?>
@@ -165,7 +177,7 @@
 
       <table>
         <tr>
-          <th style="width: 1%"><input type="checkbox" id="all" checked /></th>
+          <th style="width: 1%"><input type="checkbox" id="all" /></th>
           <th>Row</th>
           <th>Level</th>
           <th>Id</th>
@@ -177,7 +189,7 @@
         <tr class="<?= r.state ?>">
           <td class="num">
             <? if (r.adoptable) { ?>
-            <input type="checkbox" class="pick" value="<?= r.at ?>" checked />
+            <input type="checkbox" class="pick" value="<?= r.at ?>" <?= r.ticked ? 'checked' : '' ?> />
             <? } ?>
           </td>
           <td class="num"><?= r.row ?></td>
@@ -214,6 +226,7 @@
 
     <script>
       var refused = <?= refused ?>;
+      var source = <?= review.source ? "'" + review.source + "'" : 'null' ?>;
 
       function picked() {
         return Array.prototype.filter
@@ -226,9 +239,12 @@
       }
 
       function count() {
+        var boxes = document.querySelectorAll('.pick');
         var n = picked().length;
+
         document.getElementById('go').disabled = n === 0;
         document.getElementById('go').textContent = n === 1 ? 'Adopt 1 id' : 'Adopt ' + n + ' ids';
+        document.getElementById('all').checked = n > 0 && n === boxes.length;
       }
 
       document.getElementById('all').onchange = function () {
@@ -253,7 +269,7 @@
             document.getElementById('status').textContent = String(e.message || e);
             count();
           })
-          .adoptConfirmed(picked());
+          .adoptConfirmed(picked(), source);
       }
 
       function finished(done) {

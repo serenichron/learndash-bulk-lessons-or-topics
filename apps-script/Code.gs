@@ -82,9 +82,15 @@ function onOpen() {
     viewing.addItem(profile.label, 'view_' + profile.key);
   });
 
+  var borrow = ui.createMenu('Try the ids from another site');
+  PROFILES.forEach(function (profile) {
+    borrow.addItem(profile.label, 'adopt_from_' + profile.key);
+  });
+
   var tools = ui
     .createMenu('Tools')
     .addItem('Adopt the ids in this sheet', 'adoptIds')
+    .addSubMenu(borrow)
     .addSeparator()
     .addItem('Link this cell to a post that already exists', 'linkCell')
     .addItem('Unlink this cell from this site', 'unlinkCell')
@@ -1370,6 +1376,32 @@ function cellTarget() {
  * a real id pointing at an entirely different quiz.
  */
 function adoptIds() {
+  openAdoption(null);
+}
+
+/**
+ * Try the ids one site already holds against the site this tab is showing.
+ *
+ * Cloned sites carry the same ids, so what production calls quiz 2159694 is
+ * very often what QA calls quiz 2159694. This asks, row by row, rather than
+ * making you paste the same numbers in twice.
+ *
+ * It asks the target site about every one of them, so an id that is not
+ * there, or holds something else, is reported and cannot be ticked. A title
+ * that disagrees starts unticked here, because these are numbers the script
+ * proposed rather than numbers you chose.
+ */
+function adopt_from_dev() {
+  openAdoption('dev');
+}
+function adopt_from_qa() {
+  openAdoption('qa');
+}
+function adopt_from_live() {
+  openAdoption('live');
+}
+
+function openAdoption(from) {
   var ui = SpreadsheetApp.getUi();
   var review;
 
@@ -1377,8 +1409,19 @@ function adoptIds() {
     return;
   }
 
+  if (from && from === viewProfile()) {
+    ui.alert(
+      'That is the site you are on',
+      'This tab is already showing ' +
+        labelOf(from) +
+        '. Pick one of the other two, or use Adopt the ids in this sheet to take what is in the cells.',
+      ui.ButtonSet.OK
+    );
+    return;
+  }
+
   try {
-    review = adoptionReview();
+    review = adoptionReview(from);
   } catch (e) {
     ui.alert(String(e.message || e));
     return;
@@ -1387,7 +1430,13 @@ function adoptIds() {
   if (!review.rows.length) {
     ui.alert(
       'Nothing to adopt',
-      'Every number in this sheet is already known as a ' + review.label + ' id.',
+      from
+        ? 'This sheet holds no ' +
+          labelOf(from) +
+          ' ids that are not already known as ' +
+          review.label +
+          ' ids.'
+        : 'Every number in this sheet is already known as a ' + review.label + ' id.',
       ui.ButtonSet.OK
     );
     return;
@@ -1409,18 +1458,26 @@ function adoptIds() {
  * what is written is what the sheet and the site say at that moment rather
  * than what they said while you were reading.
  */
-function adoptionReview() {
+function adoptionReview(from) {
   var view = viewProfile();
   var cfg = config(view);
   var sheet = readSheet();
   var ledger = readLedger();
+
+  // Where the numbers to try come from. The cells, which is a person having
+  // pasted them in, or another site's ids, which is the script proposing
+  // them. The difference matters at the end, where proposed numbers with a
+  // title that disagrees start unticked.
+  var source = from && from !== view ? profileOr(from, null) : null;
 
   var candidates = [];
   var elsewhere = 0;
 
   sheet.rows.forEach(function (r) {
     LEVELS.forEach(function (level) {
-      var raw = String(r.data[level + '_id'] == null ? '' : r.data[level + '_id']).trim();
+      var raw = source
+        ? String((ledger.get(r.key, level, source) || {}).id || '')
+        : String(r.data[level + '_id'] == null ? '' : r.data[level + '_id']).trim();
 
       if (!/^\d+$/.test(raw)) {
         return;
@@ -1433,6 +1490,7 @@ function adoptionReview() {
       }
 
       if (
+        !source &&
         ledger.entriesFor(r.key, level).some(function (entry) {
           return String(entry.id) === raw;
         })
@@ -1487,7 +1545,12 @@ function adoptionReview() {
         siteType: post && post.found ? post.post_type : '',
         status: post && post.found ? post.status : '',
         state: state,
-        adoptable: state === 'same' || state === 'differs'
+        adoptable: state === 'same' || state === 'differs',
+        // A number you pasted in, you chose. A number taken from another
+        // site, the script chose, so a title that disagrees has to be ticked
+        // by hand. This is the one action that could tie fifty rows to the
+        // wrong content in a single press.
+        ticked: state === 'same' || (state === 'differs' && !source)
       };
     });
 
@@ -1505,6 +1568,8 @@ function adoptionReview() {
     host: hostOf(cfg.url),
     url: cfg.url,
     sheet: sheet.name,
+    source: source,
+    sourceLabel: source ? labelOf(source) : '',
     elsewhere: elsewhere,
     rows: rows,
     counts: {
@@ -1602,13 +1667,13 @@ function codePoint(number, whole) {
  * again rather than trusting what the screen was showing, and anything that
  * no longer lines up is simply not in the new list and so is not written.
  */
-function adoptConfirmed(chosen) {
+function adoptConfirmed(chosen, from) {
   var wanted = {};
   (chosen || []).forEach(function (at) {
     wanted[String(at)] = true;
   });
 
-  var review = adoptionReview();
+  var review = adoptionReview(from);
   var entries = [];
   var skipped = 0;
 

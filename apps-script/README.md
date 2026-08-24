@@ -236,6 +236,8 @@ create.
 **Change site** decides which site this tab shows, and which site Check talks
 to. It is not where a push goes.
 
+**Tools** holds the adopting, the linking and the repainting. See below.
+
 ## Ids you already have
 
 If content was uploaded before any of this existed, paste its ids into the id
@@ -265,6 +267,30 @@ duplicate or the wrong post overwritten, so it stops and asks.
 
 Adopting needs the `lookup` route, which arrived in plugin 1.5.0. Update the
 plugin on a site before adopting ids there. Check and push work either way.
+
+## The same content on more than one site
+
+Staging sites are usually clones, so what production calls quiz 2159694 is
+very often what QA calls quiz 2159694. Once one site is adopted, the others
+can be done without pasting anything again.
+
+Point the tab at the site you want to link, then Tools, Try the ids from
+another site, and pick where to take the numbers from.
+
+It asks the target site about every one of them. What is not there, or holds
+something else, is reported and cannot be ticked, so those rows stay `CREATE`
+and a push makes them. What is there with a matching title is ticked ready.
+
+A title that disagrees starts **unticked** here, unlike when you paste ids in
+yourself. You did not choose these numbers, the script did, and on a site that
+is not a true clone a plausible id can be a different post entirely. Tick one
+only if you know it is the same content under another name.
+
+What this cannot find is content that exists on the other site under a
+different id, because somebody made it there separately. Those rows stay
+`CREATE` and a push makes a second copy. Watch the create count on the push
+confirm: if it says fifty rows would be created on a site you expected to be
+up to date, stop and look.
 
 For a single row there is Tools, Link this cell to a post that already exists.
 Put the cursor on the id cell first.

@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Try the ids from another site.** Staging sites are usually clones, so what
+  production calls quiz 2159694 is very often what QA calls quiz 2159694. Once
+  one site is adopted, Tools now offers to take those same numbers and ask
+  another site about them, rather than making you paste the list in again for
+  every site. It is the adopt screen you already have: same lookup, same post
+  type check, same titles side by side. What is not there cannot be ticked, so
+  those rows stay CREATE and a push makes them.
+
+  A title that disagrees starts unticked here, unlike when you paste ids in
+  yourself. You chose those numbers; these the script proposed, and on a site
+  that is not a true clone a plausible id can be a different post entirely.
+  This is the one action that could tie fifty rows to the wrong content in a
+  single press, so the burden sits on ticking rather than unticking.
+
 ### Fixed
 - **A push that made courses, lessons and topics said it had done nothing.**
   The summary counted two levels and threw the other three away, so a sheet

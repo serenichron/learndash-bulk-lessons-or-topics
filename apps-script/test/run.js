@@ -417,7 +417,9 @@ section('The spreadsheet shim exposes everything the library needs');
       items.push(m[1].replace(/^'|'$/g, '') + ' -> ' + m[2]);
     }
 
-    for (const m of body.matchAll(/addItem\(\s*(?:'([^']*)'\s*\+\s*)?profile\.label\s*,\s*'(view_|push_)'\s*\+\s*profile\.key\s*\)/g)) {
+    // Any handler built from a profile key, not just the two there were
+    // when this was written.
+    for (const m of body.matchAll(/addItem\(\s*(?:'([^']*)'\s*\+\s*)?profile\.label\s*,\s*'(\w+_)'\s*\+\s*profile\.key\s*\)/g)) {
       PROFILES.forEach(p => items.push((m[1] || '') + p.label + ' -> ' + m[2] + p.key));
     }
 
@@ -766,6 +768,110 @@ section('WordPress typesetting is undone before titles are compared');
   ok('an empty title never counts as matching', !sameTitle('', ''));
   ok('an unknown entity is left alone rather than mangled', normaliseTitle('a &weird; b') === 'a &weird; b', normaliseTitle('a &weird; b'));
   ok('a nonsense code point is left alone', normaliseTitle('&#0;') === '&#0;', normaliseTitle('&#0;'));
+}
+
+// -------------------------------------------------------------------------
+section('Trying one site\u2019s ids against another');
+{
+  const HEAD = ['quiz_id', 'question_id', 'quiz_post_title', 'question_post_title', 'question_type'];
+  const { upload } = freshBook([
+    HEAD,
+    ['CREATE', 'CREATE', 'Mock 1', 'Build a Sentence 1', 'single'],
+    ['PREV', 'CREATE', '', 'Build a Sentence 2', 'single'],
+    ['CREATE', 'CREATE', 'Mock 2', 'Write an Email', 'single'],
+  ]);
+
+  const sheet = readSheet();
+
+  // Production knows this sheet already.
+  recordIds(
+    resolveRows(sheet, readLedger(), 'live'),
+    { url: 'https://live.example.com', rows: {
+      '2': { quiz: 700, question: 701 },
+      '3': { question: 702 },
+      '4': { quiz: 703, question: 704 },
+    } },
+    { profile: 'live', url: 'https://live.example.com' }
+  );
+
+  H.props.profile = 'qa';
+  H.props.qa_url = 'https://qa.example.com';
+  H.props.qa_key = 'ldbc_test';
+  setView('qa');
+
+  ok('qa knows none of it yet', resolveRows(readSheet(), readLedger(), 'qa').every(p => p.creates));
+
+  // QA is a clone, mostly. 704 was never copied across, and 703 drifted.
+  H.fetchReplies.push({ code: 200, body: JSON.stringify({ ok: true, url: 'https://qa.example.com', posts: [
+    { id: 700, found: true, post_type: 'sfwd-quiz', title: 'Mock 1', status: 'publish' },
+    { id: 701, found: true, post_type: 'sfwd-question', title: 'Build a Sentence 1', status: 'publish' },
+    { id: 702, found: true, post_type: 'sfwd-question', title: 'Build a Sentence 2', status: 'publish' },
+    { id: 703, found: true, post_type: 'sfwd-quiz', title: 'Something else on QA', status: 'publish' },
+    { id: 704, found: false, post_type: null, title: null, status: null },
+  ] }) });
+
+  const review = adoptionReview('live');
+
+  ok('it says where the numbers came from', review.source === 'live' && review.sourceLabel === 'Production', review.source);
+  ok('and which site they were tried on', review.label === 'QA staging' && review.host === 'qa.example.com');
+  ok('every production id is offered', review.rows.length === 5, review.rows.length);
+
+  const by = {};
+  review.rows.forEach(r => { by[r.id] = r; });
+
+  ok('the ones that match are ticked', by[700].ticked && by[701].ticked && by[702].ticked);
+  ok('the one that drifted is offered but unticked', by[703].adoptable === true && by[703].ticked === false, by[703]);
+  ok('the one that is not there cannot be ticked', by[704].adoptable === false);
+  ok('no false warning about ids held elsewhere', review.elsewhere === 0);
+
+  // Accept the default: adopt what is ticked, leave the drifted one alone.
+  H.fetchReplies.push({ code: 200, body: JSON.stringify({ ok: true, url: 'https://qa.example.com', posts: [
+    { id: 700, found: true, post_type: 'sfwd-quiz', title: 'Mock 1', status: 'publish' },
+    { id: 701, found: true, post_type: 'sfwd-question', title: 'Build a Sentence 1', status: 'publish' },
+    { id: 702, found: true, post_type: 'sfwd-question', title: 'Build a Sentence 2', status: 'publish' },
+    { id: 703, found: true, post_type: 'sfwd-quiz', title: 'Something else on QA', status: 'publish' },
+    { id: 704, found: false, post_type: null, title: null, status: null },
+  ] }) });
+
+  const done = adoptConfirmed(review.rows.filter(r => r.ticked).map(r => r.at), 'live');
+
+  ok('three were written', done.adopted === 3, done);
+  ok('the drifted one counts as skipped', done.skipped === 1, done);
+
+  const ledger = readLedger();
+  const rows = readSheet().rows;
+  ok('qa now knows the quiz', (ledger.get(rows[0].key, 'quiz', 'qa') || {}).id === 700);
+  ok('qa does not know the drifted quiz', ledger.get(rows[2].key, 'quiz', 'qa') === null);
+  ok('production is untouched', (ledger.get(rows[2].key, 'quiz', 'live') || {}).id === 703);
+
+  const nowQa = resolveRows(readSheet(), readLedger(), 'qa');
+  ok('a qa push updates what was adopted', nowQa[0].data.quiz_id === '700' && nowQa[0].data.question_id === '701');
+  ok('and still creates what was not', nowQa[2].data.quiz_id === 'CREATE' && nowQa[2].data.question_id === 'CREATE', nowQa[2].data);
+}
+
+// -------------------------------------------------------------------------
+section('Borrowing from the site you are already on does nothing');
+{
+  const { upload } = freshBook(sampleRows());
+  const sheet = readSheet();
+
+  recordIds(
+    resolveRows(sheet, readLedger(), 'dev'),
+    { url: 'https://dev.example.com', rows: { '2': { quiz: 31, question: 41 } } },
+    { profile: 'dev', url: 'https://dev.example.com' }
+  );
+
+  H.props.profile = 'dev';
+  H.props.dev_url = 'https://dev.example.com';
+  H.props.dev_key = 'ldbc_test';
+
+  const review = adoptionReview('dev');
+  ok('the source is dropped when it is the view', review.source === null, review.source);
+  ok('and nothing is proposed', review.rows.length === 0, review.rows.length);
+  ok('no request was made', H.fetches.length === 0, H.fetches.length);
+
+  openAdoption('dev');
+  ok('the menu item says so plainly', /already showing Dev staging/.test(JSON.stringify(H.alerts)), H.alerts.slice(-1));
 }
 
 // -------------------------------------------------------------------------

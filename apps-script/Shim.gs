@@ -38,9 +38,16 @@ function onOpen() {
     .addItem('QA staging', 'view_qa')
     .addItem('Production', 'view_live');
 
+  var borrow = ui
+    .createMenu('Try the ids from another site')
+    .addItem('Dev staging', 'adopt_from_dev')
+    .addItem('QA staging', 'adopt_from_qa')
+    .addItem('Production', 'adopt_from_live');
+
   var tools = ui
     .createMenu('Tools')
     .addItem('Adopt the ids in this sheet', 'adoptIds')
+    .addSubMenu(borrow)
     .addSeparator()
     .addItem('Link this cell to a post that already exists', 'linkCell')
     .addItem('Unlink this cell from this site', 'unlinkCell')
@@ -107,6 +114,15 @@ function push_live() {
 function adoptIds() {
   LDBC.adoptIds();
 }
+function adopt_from_dev() {
+  LDBC.adopt_from_dev();
+}
+function adopt_from_qa() {
+  LDBC.adopt_from_qa();
+}
+function adopt_from_live() {
+  LDBC.adopt_from_live();
+}
 function linkCell() {
   LDBC.linkCell();
 }
@@ -126,8 +142,8 @@ function repaintNow() {
 function currentView() {
   return LDBC.currentView();
 }
-function adoptConfirmed(chosen) {
-  return LDBC.adoptConfirmed(chosen);
+function adoptConfirmed(chosen, from) {
+  return LDBC.adoptConfirmed(chosen, from);
 }
 function saveSettings(form) {
   return LDBC.saveSettings(form);
