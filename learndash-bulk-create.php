@@ -22,6 +22,7 @@ if (file_exists(__DIR__ . '/vendor/autoload.php')) {
 }
 
 use League\Csv\Reader;
+use TSTPrep\LDImporter\AdminOrder;
 use TSTPrep\LDImporter\Api;
 use TSTPrep\LDImporter\ApiKeys;
 use TSTPrep\LDImporter\Exporter;
@@ -40,6 +41,7 @@ class Extended_LearnDash_Bulk_Create {
     add_action('admin_post_ldbc_revoke_key', [$this, 'handle_revoke_key']);
 
     (new Api())->register();
+    (new AdminOrder())->register();
   }
 
   public function handle_create_key() {

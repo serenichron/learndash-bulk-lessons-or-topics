@@ -5,6 +5,8 @@
     "@types/jquery": "^3.5.33"
   },
   "scripts": {
-    "test:apps-script": "node apps-script/test/run.js"
+    "test": "npm run test:apps-script && npm run test:php",
+    "test:apps-script": "node apps-script/test/run.js",
+    "test:php": "php tests/admin-order.php"
   }
 }

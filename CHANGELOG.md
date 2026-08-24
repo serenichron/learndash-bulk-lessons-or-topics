@@ -66,9 +66,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Everything else lives in one standalone script attached as `LDBC`. See
   `apps-script/README.md`.
 - **Tests.** The ledger, the resolving, the repainting and the tab painting run
-  against a small fake of Apps Script, 143 assertions, `npm run
-  test:apps-script`. One of them checks that the shim exposes exactly the names
+  against a small fake of Apps Script, 145 assertions, and the admin ordering
+  rules against a fake of WP_Query. `npm test` runs both. One of them checks that the shim exposes exactly the names
   the library's menu and dialogs call, so the two cannot drift apart.
+
+### Fixed
+- **Five quizzes uploaded as Set 1 to Set 5 came back as 5, 3, 4, 1, 2.** A
+  bulk import makes a whole sheet inside one second, so every row it creates
+  carries the same `post_date`. WordPress sorts its admin lists by date, and
+  when dates tie it leaves the answer to MySQL, which returns rows in whatever
+  order suits it. New `AdminOrder` sorts by id as well, and ids are handed out
+  in creation order, so a tie on the second now resolves to the order the sheet
+  had. Nothing is written and no timestamp is invented. It applies only to the
+  six post types this plugin creates, and only while a list is on its date
+  sort, so clicking any other column still does what it says.
 
 ### Changed
 - **Settings picks which site a tab shows, not where a push goes.** The radio

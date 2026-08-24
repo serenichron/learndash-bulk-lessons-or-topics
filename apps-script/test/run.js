@@ -405,13 +405,30 @@ section('The spreadsheet shim exposes everything the library needs');
 
   const needed = new Set(['onOpen']);
 
-  // Menu handlers written out in full.
-  for (const m of lib.matchAll(/addItem\([^,]+,\s*'([A-Za-z_]\w*)'\s*\)/g)) needed.add(m[1]);
+  /**
+   * The label and handler of every menu item, with the per-site loops in the
+   * library's version written out, so the two menus can be compared as text.
+   */
+  function menuItems(source) {
+    const body = source.slice(source.indexOf('function onOpen()'), source.indexOf('\nfunction view_dev()'));
+    const items = [];
 
-  // Menu handlers built from a profile key, one per site.
-  for (const m of lib.matchAll(/'(view_|push_)'\s*\+\s*profile\.key/g)) {
-    PROFILES.forEach(p => needed.add(m[1] + p.key));
+    for (const m of body.matchAll(/addItem\(\s*([^,]+?)\s*,\s*'([A-Za-z_]\w*)'\s*\)/g)) {
+      items.push(m[1].replace(/^'|'$/g, '') + ' -> ' + m[2]);
+    }
+
+    for (const m of body.matchAll(/addItem\(\s*(?:'([^']*)'\s*\+\s*)?profile\.label\s*,\s*'(view_|push_)'\s*\+\s*profile\.key\s*\)/g)) {
+      PROFILES.forEach(p => items.push((m[1] || '') + p.label + ' -> ' + m[2] + p.key));
+    }
+
+    return items;
   }
+
+  const libMenu = menuItems(lib);
+  const shimMenu = menuItems(shim);
+
+  libMenu.forEach(item => needed.add(item.split(' -> ')[1]));
+  shimMenu.forEach(item => needed.add(item.split(' -> ')[1]));
 
   // Anything a dialog calls back into.
   //
@@ -458,11 +475,22 @@ section('The spreadsheet shim exposes everything the library needs');
   const absent = [...needed].filter(n => !inLibrary.has(n));
   const spare = [...defined].filter(n => !needed.has(n));
 
+  // Everything after onOpen is one-line handoffs and nothing else.
+  const handoffs = shim.slice(shim.indexOf('\nfunction view_dev()'));
+
   ok('every name the menu and dialogs use is in Shim.gs', missing.length === 0, missing);
   ok('every one of them really exists in the library', absent.length === 0, absent);
   ok('the shim carries nothing it does not need', spare.length === 0, spare);
   ok('all three sites got a view and a push handler', needed.has('view_qa') && needed.has('push_live'));
-  ok('the shim hands off and holds no logic', !/\bif\s*\(|\bfor\s*\(|SpreadsheetApp/.test(shim));
+  ok('past the menu, the shim only hands off', !/\bif\s*\(|\bfor\s*\(|SpreadsheetApp/.test(handoffs));
+
+  // The shim builds the menu itself, so a simple trigger can raise it without
+  // permission. That means two menus exist and they must stay identical.
+  ok('the shim builds a menu of its own', shimMenu.length > 0);
+  const onlyShim = shimMenu.filter(i => !libMenu.includes(i));
+  const onlyLib = libMenu.filter(i => !shimMenu.includes(i));
+
+  ok('it is the same menu as the library builds', onlyShim.length === 0 && onlyLib.length === 0, { onlyShim, onlyLib });
 }
 
 // -------------------------------------------------------------------------

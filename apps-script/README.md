@@ -140,8 +140,20 @@ own document properties, not in the code.
 **5. In each spreadsheet.**
 
 Extensions, then Apps Script. Paste `Shim.gs` over the editor's Code.gs. That
-file is eighty lines of one-line handoffs and holds no logic, which is the
-point. It never needs editing again.
+file builds the menu and then hands every click over to the library.
+
+It builds the menu itself rather than asking the library to, and that is not
+tidiness. A menu is raised by `onOpen`, which is a simple trigger. Simple
+triggers run for anyone who opens the spreadsheet without asking permission,
+and in exchange may only touch things that need none. Reaching into a library
+is not one of those things. An `onOpen` that called the library would build
+nothing at all for a colleague who has not yet authorised the script, and the
+menu they would have used to authorise it is the very thing that failed to
+appear.
+
+So the menu is a fixed list in the shim, which it can be because it names no
+site. Change the menu and all twelve shims need repasting. That is the price
+of everyone seeing it.
 
 Press the plus next to Libraries, paste the Script ID, press Look up. Set the
 identifier to `LDBC`, exactly that, because the shim calls it by name. It will
@@ -202,8 +214,9 @@ one before the page loads.
 Then use Test the connection. It should name the site back to you and confirm
 that LearnDash and the question types plugin are both there.
 
-The first time you use the menu, Google asks whether the script may talk to your
-site. It has to, so say yes.
+The first time each person uses the menu, Google asks whether the script may
+talk to your site. It has to, so say yes. Everyone who uses the spreadsheet
+answers that once, for themselves. Nobody can answer it on their behalf.
 
 ## Using it
 
