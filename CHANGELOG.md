@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- **A new key was shown once, off the top of the screen, and never again.**
+  The box carried WordPress's `notice` class, and WordPress moves anything
+  with that class to the very top of an admin page. The address the page is
+  reached at ends in `#keys`, which scrolls straight past it to the table
+  below. So the one thing that is shown once and never again was the one
+  thing landing where nobody was looking. The box now stays where it is put,
+  next to the keys it belongs to, and the page scrolls to it.
+
 ## [1.5.1] - 2026-08-24
 
 ### Fixed

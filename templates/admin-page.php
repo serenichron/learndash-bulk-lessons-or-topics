@@ -171,13 +171,28 @@ $types = ['quiz'];
   <?php $newKey = get_transient('ldbc_new_key_' . get_current_user_id()); ?>
   <?php if ($newKey): ?>
     <?php delete_transient('ldbc_new_key_' . get_current_user_id()); ?>
-    <div class="notice notice-success">
-      <p><strong><?php _e(
+    <?php
+    // Not a `notice`, on purpose. WordPress moves anything with that class to
+    // the top of the page, and the address this page is reached at ends in
+    // #keys, which scrolls straight past it. The one thing shown once and
+    // never again was the one thing landing off screen.
+    ?>
+    <div id="ldbc-new-key" style="max-width: 40em; margin: 1em 0; padding: 14px 16px; border: 2px solid #00a32a; border-radius: 4px; background: #f0f6fc;">
+      <p style="margin: 0 0 4px; font-size: 14px;"><strong><?php _e(
         'Copy this key now. It is not shown again.',
         'extended-learndash-bulk-create',
       ); ?></strong></p>
-      <p><input type="text" readonly value="<?= esc_attr($newKey) ?>" style="width: 100%; max-width: 40em; font-family: monospace;" onclick="this.select()"></p>
+      <p style="margin: 0 0 10px; color: #50575e;"><?php _e(
+        'If you lose it, cancel the key and make another. Nothing breaks.',
+        'extended-learndash-bulk-create',
+      ); ?></p>
+      <input type="text" readonly value="<?= esc_attr($newKey) ?>" style="width: 100%; padding: 8px; font-family: monospace; font-size: 14px;" onclick="this.select()" autofocus>
     </div>
+    <script>
+      // The page is opened at #keys, so put the key itself in front of the
+      // person who just asked for it rather than the table below it.
+      document.getElementById('ldbc-new-key').scrollIntoView({ block: 'center' });
+    </script>
   <?php endif; ?>
 
   <table class="wp-list-table widefat fixed striped" style="max-width: 60em;">
