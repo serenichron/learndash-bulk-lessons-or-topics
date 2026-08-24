@@ -135,12 +135,21 @@
     <? } ?>
 
     <h2><?= report.ok && wrote ? 'What happened' : 'What this sheet would do' ?></h2>
+    <?
+    // Every level, not just quizzes and questions. A sheet of courses and
+    // lessons used to read "0 quizzes, 0 questions" and look like nothing
+    // had happened. Zeroes are left out so one number is easy to find.
+    var levels = ['courses', 'lessons', 'topics', 'quizzes', 'questions'];
+    ?>
+
     <ul class="counts">
       <li><?= s.rows || 0 ?> rows</li>
-      <li><?= s.quizzes_new || 0 ?> new quizzes</li>
-      <li><?= s.questions_new || 0 ?> new questions</li>
-      <li><?= s.quizzes_existing || 0 ?> quizzes updated</li>
-      <li><?= s.questions_existing || 0 ?> questions updated</li>
+      <? for (var n = 0; n < levels.length; n++) { if (s[levels[n] + '_new']) { ?>
+      <li><?= s[levels[n] + '_new'] ?> new <?= levels[n] ?></li>
+      <? } } ?>
+      <? for (var u = 0; u < levels.length; u++) { if (s[levels[u] + '_existing']) { ?>
+      <li><?= s[levels[u] + '_existing'] ?> <?= levels[u] ?> updated</li>
+      <? } } ?>
       <? if (s.questions_detached) { ?>
       <li><?= s.questions_detached ?> questions taken out of a quiz</li>
       <? } ?>

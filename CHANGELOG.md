@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- **A push that made courses, lessons and topics said it had done nothing.**
+  The summary counted two levels and threw the other three away, so a sheet
+  of nothing but courses came back as "12 rows, 0 quizzes, 0 questions" and
+  read as a run that had failed quietly. Every level is counted now, and both
+  the push report and the admin page leave out whatever is zero, so one
+  number is easy to find rather than buried under four noughts.
 - **Every row of the adopt screen read as a different title.** `lookup`
   answered with `get_the_title`, which runs the `the_title` filter, and that
   texturizes. A hyphen between spaces comes back as an en dash, straight

@@ -42,8 +42,23 @@ class Validator {
   /** @var array<int, int> quiz post id => how many questions the sheet gives it */
   private array $quizRowCounts = [];
 
+  /** What each level is called when there is more than one, for the summary. */
+  private const PLURALS = [
+    'course' => 'courses',
+    'lesson' => 'lessons',
+    'topic' => 'topics',
+    'quiz' => 'quizzes',
+    'question' => 'questions',
+  ];
+
   private array $summary = [
     'rows' => 0,
+    'courses_new' => 0,
+    'courses_existing' => 0,
+    'lessons_new' => 0,
+    'lessons_existing' => 0,
+    'topics_new' => 0,
+    'topics_existing' => 0,
     'quizzes_new' => 0,
     'quizzes_existing' => 0,
     'questions_new' => 0,
@@ -330,18 +345,25 @@ class Validator {
   }
 
   private function countNew(string $level): void {
-    if ($level === 'quiz') {
-      $this->summary['quizzes_new']++;
-    } elseif ($level === 'question') {
-      $this->summary['questions_new']++;
-    }
+    $this->count($level, 'new');
   }
 
   private function countExisting(string $level): void {
-    if ($level === 'quiz') {
-      $this->summary['quizzes_existing']++;
-    } elseif ($level === 'question') {
-      $this->summary['questions_existing']++;
+    $this->count($level, 'existing');
+  }
+
+  /**
+   * Every level counts, not just quizzes and questions.
+   *
+   * A sheet that makes courses, lessons and topics did the work and said
+   * nothing about it, so a push reporting "12 rows, 0 quizzes" read as
+   * though nothing had happened.
+   */
+  private function count(string $level, string $state): void {
+    $key = (self::PLURALS[$level] ?? '') . '_' . $state;
+
+    if (isset($this->summary[$key])) {
+      $this->summary[$key]++;
     }
   }
 

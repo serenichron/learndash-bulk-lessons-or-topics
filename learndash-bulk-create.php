@@ -213,31 +213,61 @@ class Extended_LearnDash_Bulk_Create {
 
     if ($checkOnly) {
       $this->notices[] = sprintf(
-        __(
-          'Checked %1$d rows and found no problems. This would make %2$d quizzes and %3$d questions, and update %4$d quizzes and %5$d questions.',
-          'extended-learndash-bulk-create',
-        ),
+        __('Checked %1$d rows and found no problems. This would make %2$s, and update %3$s.', 'extended-learndash-bulk-create'),
         $summary['rows'],
-        $summary['quizzes_new'],
-        $summary['questions_new'],
-        $summary['quizzes_existing'],
-        $summary['questions_existing'],
+        $this->count_list($summary, 'new'),
+        $this->count_list($summary, 'existing'),
       );
       return;
     }
 
     $this->notices[] = sprintf(
-      __(
-        'Done. %1$d rows processed. Made %2$d quizzes and %3$d questions, updated %4$d quizzes and %5$d questions, took %6$d questions out of their quiz.',
-        'extended-learndash-bulk-create',
-      ),
+      __('Done. %1$d rows processed. Made %2$s, updated %3$s, took %4$d questions out of their quiz.', 'extended-learndash-bulk-create'),
       $summary['rows'],
-      $summary['quizzes_new'],
-      $summary['questions_new'],
-      $summary['quizzes_existing'],
-      $summary['questions_existing'],
+      $this->count_list($summary, 'new'),
+      $this->count_list($summary, 'existing'),
       $summary['questions_detached'] ?? 0,
     );
+  }
+
+  /**
+   * "3 courses, 8 lessons and 12 questions", or "nothing".
+   *
+   * Only what actually happened. A sheet of nothing but questions should not
+   * have to read past four zeroes to find its one number.
+   *
+   * @param array<string, int> $summary
+   */
+  private function count_list(array $summary, string $state): string {
+    $names = [
+      'courses' => __('courses', 'extended-learndash-bulk-create'),
+      'lessons' => __('lessons', 'extended-learndash-bulk-create'),
+      'topics' => __('topics', 'extended-learndash-bulk-create'),
+      'quizzes' => __('quizzes', 'extended-learndash-bulk-create'),
+      'questions' => __('questions', 'extended-learndash-bulk-create'),
+    ];
+
+    $parts = [];
+
+    foreach ($names as $plural => $label) {
+      $count = (int) ($summary[$plural . '_' . $state] ?? 0);
+
+      if ($count > 0) {
+        $parts[] = $count . ' ' . $label;
+      }
+    }
+
+    if (empty($parts)) {
+      return __('nothing', 'extended-learndash-bulk-create');
+    }
+
+    if (count($parts) === 1) {
+      return $parts[0];
+    }
+
+    $last = array_pop($parts);
+
+    return implode(', ', $parts) . ' ' . __('and', 'extended-learndash-bulk-create') . ' ' . $last;
   }
 
   private function format_error(array $error): string {
