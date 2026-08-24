@@ -5,6 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.1] - 2026-08-24
+
+### Fixed
+- **Five quizzes uploaded as Set 1 to Set 5 came back as 5, 3, 4, 1, 2.** A
+  bulk import makes a whole sheet inside one second, so every row it creates
+  carries the same `post_date`. WordPress sorts its admin lists by date, and
+  when dates tie it leaves the answer to MySQL, which returns rows in whatever
+  order suits it. New `AdminOrder` sorts by id as well, and ids are handed out
+  in creation order, so a tie on the second now resolves to the order the sheet
+  had. Nothing is written and no timestamp is invented. It applies only to the
+  six post types this plugin creates, and only while a list is on its date
+  sort, so clicking any other column still does what it says.
+
+### Changed
+- **Adopting an id shows you what you are about to adopt.** Adoption checked
+  that the post existed on that site and was the right kind of thing, then
+  wrote silently. Neither check catches the failure that matters: a real quiz
+  id that is the wrong quiz. A review screen now opens first, one line per
+  number, showing the row, the level, the id, what the site calls that post,
+  what the sheet calls it, and its status. What is not there, or is a lesson
+  where the column says quiz, cannot be ticked. Trouble sorts to the top and
+  the rest can be unticked one by one.
+
+  The titles are put side by side rather than compared, because you adopt an id
+  precisely so you can overwrite that content, so the sheet being newer than
+  the site is the normal case rather than a fault. What two titles catch is the
+  real id pointing at an entirely different quiz, and those never read as
+  near-misses of each other. The site is asked again when the button is
+  pressed, so what is written is what is true at that moment rather than what
+  was on screen while you read it. No plugin change: `lookup` already returned
+  title and status, and bulk adoption was throwing them away.
+- **Tests.** The spreadsheet fake is up to 145 assertions and the admin
+  ordering rules run against a fake of `WP_Query`. `npm test` runs both.
+
 ## [1.5.0] - 2026-08-19
 
 ### Added
@@ -32,17 +66,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and wrong from the second tab onwards.
 - **Adopting ids that already exist.** Content uploaded before any of this
   existed comes under the ledger's care by pasting its ids in, pointing the tab
-  at the site they came from, and running Tools, Adopt the ids in this sheet. A
-  review screen shows one line per number: the row, the level, the id, what the
-  site calls that post, what the sheet calls it, and its status. What is not
-  there, or is a lesson where the column says quiz, cannot be ticked. Trouble
-  sorts to the top and the rest can be unticked one by one.
-
-  The titles are put side by side rather than compared, because you adopt an id
-  precisely so you can overwrite that content, so the sheet being newer than the
-  site is the normal case rather than a fault. What two titles catch is the real
-  id pointing at an entirely different quiz, and those never read as near-misses
-  of each other. There is a single-row version under Tools as well.
+  at the site they came from, and running Tools, Adopt the ids in this sheet.
+  Every id is checked on that site first through the new `lookup` route, so one
+  that is not there, or is a lesson where the column says quiz, is reported and
+  not written. There is a single-row version under Tools as well.
 - **`GET /wp-json/ldbc/v1/lookup`.** Answers what a batch of post ids are on
   this site, up to two hundred at a time: whether each exists, its post type,
   title and status. It is what makes adopting an id fail at the moment you
@@ -66,20 +93,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Everything else lives in one standalone script attached as `LDBC`. See
   `apps-script/README.md`.
 - **Tests.** The ledger, the resolving, the repainting and the tab painting run
-  against a small fake of Apps Script, 145 assertions, and the admin ordering
-  rules against a fake of WP_Query. `npm test` runs both. One of them checks that the shim exposes exactly the names
+  against a small fake of Apps Script, 122 assertions, `npm run
+  test:apps-script`. One of them checks that the shim exposes exactly the names
   the library's menu and dialogs call, so the two cannot drift apart.
-
-### Fixed
-- **Five quizzes uploaded as Set 1 to Set 5 came back as 5, 3, 4, 1, 2.** A
-  bulk import makes a whole sheet inside one second, so every row it creates
-  carries the same `post_date`. WordPress sorts its admin lists by date, and
-  when dates tie it leaves the answer to MySQL, which returns rows in whatever
-  order suits it. New `AdminOrder` sorts by id as well, and ids are handed out
-  in creation order, so a tie on the second now resolves to the order the sheet
-  had. Nothing is written and no timestamp is invented. It applies only to the
-  six post types this plugin creates, and only while a list is on its date
-  sort, so clicking any other column still does what it says.
 
 ### Changed
 - **Settings picks which site a tab shows, not where a push goes.** The radio
