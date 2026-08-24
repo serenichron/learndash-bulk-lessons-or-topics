@@ -493,6 +493,24 @@ section('The spreadsheet shim exposes everything the library needs');
   const onlyLib = libMenu.filter(i => !shimMenu.includes(i));
 
   ok('it is the same menu as the library builds', onlyShim.length === 0 && onlyLib.length === 0, { onlyShim, onlyLib });
+
+  /**
+   * Sheets renders one level of submenu and no more. A submenu added to a
+   * submenu is dropped without a word, so the items simply are not there and
+   * nothing says why.
+   *
+   * This catches the variable form, which is how it happened: a menu handed
+   * to addSubMenu that also calls addSubMenu itself.
+   */
+  function nested(source) {
+    const body = source.slice(source.indexOf('function onOpen()'), source.indexOf('\nfunction view_dev()'));
+    const submenus = [...body.matchAll(/\.addSubMenu\(\s*([A-Za-z_]\w*)\s*\)/g)].map(m => m[1]);
+
+    return submenus.filter(name => new RegExp('\\b' + name + '\\s*\\.?\\s*\\n?\\s*\\.addSubMenu\\(').test(body));
+  }
+
+  ok('the library nests no submenu inside a submenu', nested(lib).length === 0, nested(lib));
+  ok('nor does the shim', nested(shim).length === 0, nested(shim));
 }
 
 // -------------------------------------------------------------------------

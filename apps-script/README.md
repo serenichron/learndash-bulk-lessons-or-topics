@@ -274,8 +274,8 @@ Staging sites are usually clones, so what production calls quiz 2159694 is
 very often what QA calls quiz 2159694. Once one site is adopted, the others
 can be done without pasting anything again.
 
-Point the tab at the site you want to link, then Tools, Try the ids from
-another site, and pick where to take the numbers from.
+Point the tab at the site you want to link, then Tools, then Try the ids
+from whichever site already has them.
 
 It asks the target site about every one of them. What is not there, or holds
 something else, is reported and cannot be ticked, so those rows stay `CREATE`

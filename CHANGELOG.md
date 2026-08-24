@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   production calls quiz 2159694 is very often what QA calls quiz 2159694. Once
   one site is adopted, Tools now offers to take those same numbers and ask
   another site about them, rather than making you paste the list in again for
-  every site. It is the adopt screen you already have: same lookup, same post
+  every site. One item per site, sitting under Adopt the ids in this sheet. It is the adopt screen you already have: same lookup, same post
   type check, same titles side by side. What is not there cannot be ticked, so
   those rows stay CREATE and a push makes them.
 

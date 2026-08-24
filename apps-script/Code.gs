@@ -82,15 +82,15 @@ function onOpen() {
     viewing.addItem(profile.label, 'view_' + profile.key);
   });
 
-  var borrow = ui.createMenu('Try the ids from another site');
+  // Flat, not a submenu. Sheets renders one level of submenu and no more, so
+  // anything nested under Tools is dropped without a word.
+  var tools = ui.createMenu('Tools').addItem('Adopt the ids in this sheet', 'adoptIds');
+
   PROFILES.forEach(function (profile) {
-    borrow.addItem(profile.label, 'adopt_from_' + profile.key);
+    tools.addItem('Try the ids from ' + profile.label, 'adopt_from_' + profile.key);
   });
 
-  var tools = ui
-    .createMenu('Tools')
-    .addItem('Adopt the ids in this sheet', 'adoptIds')
-    .addSubMenu(borrow)
+  tools
     .addSeparator()
     .addItem('Link this cell to a post that already exists', 'linkCell')
     .addItem('Unlink this cell from this site', 'unlinkCell')

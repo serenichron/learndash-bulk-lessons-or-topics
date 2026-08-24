@@ -38,16 +38,14 @@ function onOpen() {
     .addItem('QA staging', 'view_qa')
     .addItem('Production', 'view_live');
 
-  var borrow = ui
-    .createMenu('Try the ids from another site')
-    .addItem('Dev staging', 'adopt_from_dev')
-    .addItem('QA staging', 'adopt_from_qa')
-    .addItem('Production', 'adopt_from_live');
-
+  // Flat, not a submenu. Sheets renders one level of submenu and no more, so
+  // anything nested under Tools is dropped without a word.
   var tools = ui
     .createMenu('Tools')
     .addItem('Adopt the ids in this sheet', 'adoptIds')
-    .addSubMenu(borrow)
+    .addItem('Try the ids from Dev staging', 'adopt_from_dev')
+    .addItem('Try the ids from QA staging', 'adopt_from_qa')
+    .addItem('Try the ids from Production', 'adopt_from_live')
     .addSeparator()
     .addItem('Link this cell to a post that already exists', 'linkCell')
     .addItem('Unlink this cell from this site', 'unlinkCell')
