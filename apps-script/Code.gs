@@ -1525,16 +1525,74 @@ function countState(rows, state) {
   }).length;
 }
 
-/** Close enough to be the same title, ignoring case and stray spacing. */
+/** Close enough to be the same title, once WordPress's typesetting is undone. */
 function sameTitle(a, b) {
   return normaliseTitle(a) !== '' && normaliseTitle(a) === normaliseTitle(b);
 }
 
+/** The few entities a WordPress title comes back with, spelled by name. */
+var NAMED_ENTITIES = {
+  amp: '&',
+  lt: '<',
+  gt: '>',
+  quot: '"',
+  apos: "'",
+  nbsp: ' ',
+  ndash: '-',
+  mdash: '-',
+  hellip: '...',
+  lsquo: "'",
+  rsquo: "'",
+  ldquo: '"',
+  rdquo: '"'
+};
+
+/**
+ * Undo what WordPress did to a title on its way out.
+ *
+ * `get_the_title` runs the `the_title` filter, and that texturizes: a plain
+ * hyphen between spaces becomes an en dash, straight quotes become curly
+ * ones, and some of it arrives as entities rather than characters. So a site
+ * says "SB-L &#8211; Listen to a Conversation 1" for a sheet that says
+ * "SB-L - Listen to a Conversation 1".
+ *
+ * None of that is a difference in the content. It is a difference in how
+ * WordPress prints it. Undoing it here is what stops every row of an adopt
+ * screen reading as a mismatch, which would make the one column worth
+ * reading worth ignoring.
+ */
 function normaliseTitle(text) {
-  return String(text == null ? '' : text)
+  return decodeEntities(String(text == null ? '' : text))
+    .replace(/[‒–—―−]/g, '-')
+    .replace(/[‘’‛]/g, "'")
+    .replace(/[“”‟]/g, '"')
+    .replace(/[   ]/g, ' ')
+    .replace(/…/g, '...')
     .replace(/\s+/g, ' ')
     .trim()
     .toLowerCase();
+}
+
+function decodeEntities(text) {
+  return text
+    .replace(/&#(\d+);/g, function (whole, code) {
+      return codePoint(parseInt(code, 10), whole);
+    })
+    .replace(/&#x([0-9a-fA-F]+);/g, function (whole, code) {
+      return codePoint(parseInt(code, 16), whole);
+    })
+    .replace(/&([a-zA-Z]+);/g, function (whole, name) {
+      var known = NAMED_ENTITIES[name.toLowerCase()];
+      return known === undefined ? whole : known;
+    });
+}
+
+function codePoint(number, whole) {
+  if (!isFinite(number) || number < 1 || number > 0x10ffff) {
+    return whole;
+  }
+
+  return String.fromCharCode(number);
 }
 
 /**

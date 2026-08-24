@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- **Every row of the adopt screen read as a different title.** `lookup`
+  answered with `get_the_title`, which runs the `the_title` filter, and that
+  texturizes. A hyphen between spaces comes back as an en dash, straight
+  quotes come back curly, and some of it arrives as entities rather than
+  characters. So a site saying "SB-L &#8211; Listen to a Conversation 1"
+  disagreed with a sheet saying "SB-L - Listen to a Conversation 1", and the
+  one column worth reading on that screen became worth ignoring. `lookup` now
+  answers with the stored title, and the spreadsheet undoes that typesetting
+  before it compares, so an older site still lines up.
 - **A new key was shown once, off the top of the screen, and never again.**
   The box carried WordPress's `notice` class, and WordPress moves anything
   with that class to the very top of an admin page. The address the page is

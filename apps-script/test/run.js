@@ -730,5 +730,44 @@ section('The adopt screen puts the titles side by side');
 }
 
 // -------------------------------------------------------------------------
+section('WordPress typesetting is undone before titles are compared');
+{
+  // Straight from the site: get_the_title runs the_title, which texturizes.
+  const same = [
+    ['SB-L &#8211; Listen to a Conversation 1', 'SB-L - Listen to a Conversation 1', 'an en dash entity'],
+    ['Score Builder Activities &#8211; Listening &#8211; Listen to a Conversation',
+     'Score Builder Activities - Listening - Listen to a Conversation', 'two of them in one title'],
+    ['Writing &#8212; Task 1', 'Writing - Task 1', 'an em dash entity'],
+    ['SB-L \u2013 Listen 1', 'SB-L - Listen 1', 'an en dash character'],
+    ['It&#8217;s here', "It's here", 'a curly apostrophe entity'],
+    ['It\u2019s here', "It's here", 'a curly apostrophe character'],
+    ['A &amp; B', 'A & B', 'an ampersand'],
+    ['Tom&nbsp;Jones', 'Tom Jones', 'a hard space'],
+    ['Read&#8230;', 'Read...', 'an ellipsis'],
+    ['&#x2013; hex', '- hex', 'a hex entity'],
+    ['  Mixed   Spacing ', 'Mixed Spacing', 'stray spacing'],
+    ['LISTEN TO A CONVERSATION', 'Listen to a Conversation', 'a difference of case'],
+  ];
+
+  same.forEach(([site, sheet, why]) => {
+    ok('matches through ' + why, sameTitle(site, sheet), { site, sheet, siteAs: normaliseTitle(site), sheetAs: normaliseTitle(sheet) });
+  });
+
+  const differ = [
+    ['Listen to a Conversation 1', 'Listen to a Conversation 2', 'a different number'],
+    ['Write an Email', 'Write for an Academic Discussion', 'an entirely different title'],
+    ['SB-L - Listen', 'SB-R - Listen', 'one letter'],
+  ];
+
+  differ.forEach(([site, sheet, why]) => {
+    ok('still differs on ' + why, !sameTitle(site, sheet), { site, sheet });
+  });
+
+  ok('an empty title never counts as matching', !sameTitle('', ''));
+  ok('an unknown entity is left alone rather than mangled', normaliseTitle('a &weird; b') === 'a &weird; b', normaliseTitle('a &weird; b'));
+  ok('a nonsense code point is left alone', normaliseTitle('&#0;') === '&#0;', normaliseTitle('&#0;'));
+}
+
+// -------------------------------------------------------------------------
 console.log('\n' + (failures ? failures + ' FAILURES' : 'all green'));
 process.exit(failures ? 1 : 0);

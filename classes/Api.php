@@ -190,7 +190,12 @@ class Api {
         'id' => $id,
         'found' => (bool) $type,
         'post_type' => $type ?: null,
-        'title' => $type ? get_the_title($id) : null,
+        // Raw, not get_the_title. That runs the `the_title` filter, which
+        // texturizes: a hyphen between spaces comes back as an en dash, and
+        // straight quotes come back curly. The spreadsheet compares this
+        // against what it would push, so it wants what is stored rather than
+        // what would be printed.
+        'title' => $type ? get_post_field('post_title', $id, 'raw') : null,
         'status' => $type ? get_post_status($id) : null,
       ];
     }
