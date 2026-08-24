@@ -497,12 +497,9 @@ section('The spreadsheet shim exposes everything the library needs');
   ok('it is the same menu as the library builds', onlyShim.length === 0 && onlyLib.length === 0, { onlyShim, onlyLib });
 
   /**
-   * Sheets renders one level of submenu and no more. A submenu added to a
-   * submenu is dropped without a word, so the items simply are not there and
-   * nothing says why.
-   *
-   * This catches the variable form, which is how it happened: a menu handed
-   * to addSubMenu that also calls addSubMenu itself.
+   * Nothing here needs a submenu inside a submenu, and a menu three levels
+   * deep is a menu nobody finds. This catches the variable form: a menu
+   * handed to addSubMenu that also calls addSubMenu itself.
    */
   function nested(source) {
     const body = source.slice(source.indexOf('function ldbcMenu()'), source.indexOf('\nfunction view_dev()'));

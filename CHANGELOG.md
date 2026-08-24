@@ -12,9 +12,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   production calls quiz 2159694 is very often what QA calls quiz 2159694. Once
   one site is adopted, Tools now offers to take those same numbers and ask
   another site about them, rather than making you paste the list in again for
-  every site. One item per site, sitting under Adopt the ids in this sheet. It is the adopt screen you already have: same lookup, same post
-  type check, same titles side by side. What is not there cannot be ticked, so
-  those rows stay CREATE and a push makes them.
+  every site. One item per site, sitting under Adopt the ids in this sheet.
+
+  It is the adopt screen you already have: same lookup, same post type check,
+  same titles side by side. What is not there cannot be ticked, so those rows
+  stay CREATE and a push makes them.
 
   A title that disagrees starts unticked here, unlike when you paste ids in
   yourself. You chose those numbers; these the script proposed, and on a site
@@ -23,14 +25,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   single press, so the burden sits on ticking rather than unticking.
 
 ### Fixed
-- **The menu never changed in a spreadsheet that runs another script too.**
-  Apps Script loads every file in a project into one namespace, so two
-  functions called onOpen do not both run. The one that loads last replaces
-  the other, and the loser simply never happens, with nothing said either way.
-  A spreadsheet with its own scripts kept showing whichever menu won, however
-  many times the shim was pasted in. The menu is built in `ldbcMenu` now and
-  `onOpen` only calls it, so a project that already has an `onOpen` adds one
-  line to its own rather than the two fighting over the name.
+- **The menu never changed in a spreadsheet that already ran another script.**
+  Apps Script loads every file in a project into one namespace, so two files
+  each holding a full copy of the shim do not both run. The one that loads
+  last replaces the other, and the loser simply never happens, with nothing
+  said either way. Pasting into the wrong copy looked exactly like pasting
+  into the right one. The menu is built in `ldbcMenu` now and `onOpen` only
+  calls it, so a project that already has an `onOpen` adds one line to its
+  own rather than the two fighting over the name.
 - **A push that made courses, lessons and topics said it had done nothing.**
   The summary counted two levels and threw the other three away, so a sheet
   of nothing but courses came back as "12 rows, 0 quizzes, 0 questions" and

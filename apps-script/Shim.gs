@@ -58,8 +58,9 @@ function ldbcMenu() {
     .addItem('QA staging', 'view_qa')
     .addItem('Production', 'view_live');
 
-  // Flat, not a submenu. Sheets renders one level of submenu and no more, so
-  // anything nested under Tools is dropped without a word.
+  // Flat rather than a submenu of its own. Tools is already one level down,
+  // and one level is all this needs, so there is nothing to gain from
+  // burying three items a click deeper.
   var tools = ui
     .createMenu('Tools')
     .addItem('Adopt the ids in this sheet', 'adoptIds')
