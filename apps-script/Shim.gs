@@ -29,7 +29,27 @@
  * reload the spreadsheet.
  */
 
+/**
+ * Sheets calls this, and only this, when the spreadsheet opens.
+ *
+ * It is kept separate from ldbcMenu because a project may only have one
+ * function called onOpen. Apps Script loads every file in a project into one
+ * namespace, so a second onOpen anywhere silently replaces the first, and
+ * whichever happens to load last is the one that runs. The other one is not
+ * an error. It simply never happens, and nothing says so.
+ *
+ * If this project holds another script that already has an onOpen, delete
+ * this function and add one line to that one:
+ *
+ *   ldbcMenu();
+ *
+ * A project wants exactly one onOpen, calling each feature's menu in turn.
+ */
 function onOpen() {
+  ldbcMenu();
+}
+
+function ldbcMenu() {
   var ui = SpreadsheetApp.getUi();
 
   var sites = ui

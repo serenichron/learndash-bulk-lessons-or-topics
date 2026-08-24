@@ -23,6 +23,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   single press, so the burden sits on ticking rather than unticking.
 
 ### Fixed
+- **The menu never changed in a spreadsheet that runs another script too.**
+  Apps Script loads every file in a project into one namespace, so two
+  functions called onOpen do not both run. The one that loads last replaces
+  the other, and the loser simply never happens, with nothing said either way.
+  A spreadsheet with its own scripts kept showing whichever menu won, however
+  many times the shim was pasted in. The menu is built in `ldbcMenu` now and
+  `onOpen` only calls it, so a project that already has an `onOpen` adds one
+  line to its own rather than the two fighting over the name.
 - **A push that made courses, lessons and topics said it had done nothing.**
   The summary counted two levels and threw the other three away, so a sheet
   of nothing but courses came back as "12 rows, 0 quizzes, 0 questions" and

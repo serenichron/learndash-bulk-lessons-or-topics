@@ -155,6 +155,19 @@ So the menu is a fixed list in the shim, which it can be because it names no
 site. Change the menu and all twelve shims need repasting. That is the price
 of everyone seeing it.
 
+**If this spreadsheet already runs another script**, look at the Files list
+before you save. Apps Script loads every file in a project into one namespace,
+so two functions called `onOpen` do not both run: the one that loads last
+replaces the other, and the loser simply never happens. Nothing says so.
+
+That is why the menu is built in `ldbcMenu` and `onOpen` only calls it. If
+another file already has an `onOpen`, delete the one in `Shim.gs` and add a
+single line to theirs:
+
+    ldbcMenu();
+
+A project wants exactly one `onOpen`, calling each feature's menu in turn.
+
 Press the plus next to Libraries, paste the Script ID, press Look up. Set the
 identifier to `LDBC`, exactly that, because the shim calls it by name. It will
 have pre-filled the project name, so type over it. Pick a version, and Add.
@@ -308,6 +321,10 @@ Wait fifteen minutes.
 
 **"There are ids here I did not write"** means somebody pasted or typed a
 number. Adopt them, or replace them with `CREATE`.
+
+**The LearnDash menu does not appear at all, or is missing items you know are
+in the code.** Another script in the same project has its own `onOpen`, and
+only one of them runs. See step 5 above.
 
 **"Rows share a row key"** means a row was copied. Use Tools, Fix duplicate row
 keys, which treats the copies as new content. If a copy was meant to be a

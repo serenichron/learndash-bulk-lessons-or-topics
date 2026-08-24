@@ -403,14 +403,16 @@ section('The spreadsheet shim exposes everything the library needs');
     .map(name => fs.readFileSync(path.join(DIR, name), 'utf8'))
     .join('\n');
 
-  const needed = new Set(['onOpen']);
+  // onOpen is what Sheets calls. ldbcMenu is what it calls, kept apart so a
+  // project that already has an onOpen can point its own at ours.
+  const needed = new Set(['onOpen', 'ldbcMenu']);
 
   /**
    * The label and handler of every menu item, with the per-site loops in the
    * library's version written out, so the two menus can be compared as text.
    */
   function menuItems(source) {
-    const body = source.slice(source.indexOf('function onOpen()'), source.indexOf('\nfunction view_dev()'));
+    const body = source.slice(source.indexOf('function ldbcMenu()'), source.indexOf('\nfunction view_dev()'));
     const items = [];
 
     for (const m of body.matchAll(/addItem\(\s*([^,]+?)\s*,\s*'([A-Za-z_]\w*)'\s*\)/g)) {
@@ -503,7 +505,7 @@ section('The spreadsheet shim exposes everything the library needs');
    * to addSubMenu that also calls addSubMenu itself.
    */
   function nested(source) {
-    const body = source.slice(source.indexOf('function onOpen()'), source.indexOf('\nfunction view_dev()'));
+    const body = source.slice(source.indexOf('function ldbcMenu()'), source.indexOf('\nfunction view_dev()'));
     const submenus = [...body.matchAll(/\.addSubMenu\(\s*([A-Za-z_]\w*)\s*\)/g)].map(m => m[1]);
 
     return submenus.filter(name => new RegExp('\\b' + name + '\\s*\\.?\\s*\\n?\\s*\\.addSubMenu\\(').test(body));
@@ -638,7 +640,7 @@ section('The site panel answers for the tab in front of you');
 section('The menu carries no state that could go stale');
 {
   const lib = fs.readFileSync(path.join(DIR, 'Code.gs'), 'utf8');
-  const body = lib.slice(lib.indexOf('function onOpen()'), lib.indexOf('function view_dev()'));
+  const body = lib.slice(lib.indexOf('function ldbcMenu()'), lib.indexOf('function view_dev()'));
 
   ok('onOpen never asks which site is showing', !/viewProfile|labelOf|currentView/.test(body), body.match(/viewProfile|labelOf|currentView/g));
   ok('no menu label mentions a site', !/Dev staging|QA staging|Production/.test(body.replace(/profile\.label/g, '')));
@@ -890,6 +892,28 @@ section('Borrowing from the site you are already on does nothing');
 
   openAdoption('dev');
   ok('the menu item says so plainly', /already showing Dev staging/.test(JSON.stringify(H.alerts)), H.alerts.slice(-1));
+}
+
+// -------------------------------------------------------------------------
+section('onOpen is a wrapper, so a project with its own can still call ours');
+{
+  const lib = fs.readFileSync(path.join(DIR, 'Code.gs'), 'utf8');
+  const shim = fs.readFileSync(path.join(DIR, 'Shim.gs'), 'utf8');
+
+  [['the library', lib], ['the shim', shim]].forEach(([name, source]) => {
+    const wrapper = source.slice(source.indexOf('function onOpen()'), source.indexOf('function ldbcMenu()'));
+
+    ok(name + ' has exactly one onOpen', source.split('\nfunction onOpen()').length - 1 === 1);
+    ok(name + ' builds its menu in ldbcMenu', /\nfunction ldbcMenu\(\)/.test(source));
+    ok(name + ' onOpen does nothing but call it', /^function onOpen\(\) \{\s*ldbcMenu\(\);\s*\}/m.test(wrapper), wrapper.slice(-80));
+    ok(name + ' onOpen touches no menu itself', !/createMenu|addItem|addToUi/.test(wrapper));
+    // Comments wrap, so the phrase is matched across the line break rather
+    // than the prose being bent to suit a regex.
+    const prose = source.replace(/\s*\n\s*\*\s*/g, ' ');
+
+    ok(name + ' says why the two are apart', /only have one function called onOpen/.test(prose));
+    ok(name + ' says what to do about a clash', /delete this function and add one line/.test(prose));
+  });
 }
 
 // -------------------------------------------------------------------------

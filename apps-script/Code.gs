@@ -63,6 +63,26 @@ var META_SHEET = '_ldbc_meta';
 // ---------------------------------------------------------------- the menu
 
 /**
+ * Sheets calls this, and only this, when the spreadsheet opens.
+ *
+ * It is kept separate from ldbcMenu because a project may only have one
+ * function called onOpen. Apps Script loads every file in a project into one
+ * namespace, so a second onOpen anywhere silently replaces the first, and
+ * whichever happens to load last is the one that runs. The other one is not
+ * an error. It simply never happens, and nothing says so.
+ *
+ * If this project holds another script that already has an onOpen, delete
+ * this function and add one line to that one:
+ *
+ *   ldbcMenu();
+ *
+ * A project wants exactly one onOpen, calling each feature's menu in turn.
+ */
+function onOpen() {
+  ldbcMenu();
+}
+
+/**
  * The menu says nothing about which site you are on, on purpose.
  *
  * It is built once when the spreadsheet opens and cannot be rebuilt when you
@@ -74,7 +94,7 @@ var META_SHEET = '_ldbc_meta';
  * on its name, and by the site panel. All three are per tab and none of them
  * can go stale.
  */
-function onOpen() {
+function ldbcMenu() {
   var ui = SpreadsheetApp.getUi();
 
   var viewing = ui.createMenu('Change site');
