@@ -1463,6 +1463,16 @@ function openAdoption(from) {
     return;
   }
 
+  // Where the numbers came from is written down here rather than trusted to
+  // survive the trip out to the screen and back. A lost source falls back to
+  // reading the cells, which on a tab showing CREATE means nothing to adopt,
+  // and the run ends saying it wrote nothing and skipped nothing. Correct,
+  // useless, and impossible to tell from a real answer.
+  //
+  // Storing '' for the paste-in case clears it, so the next run cannot pick
+  // up the last one's source.
+  metaSet('adopt_source', from || '');
+
   var template = HtmlService.createTemplateFromFile('Adopt');
   template.review = review;
 
@@ -1694,7 +1704,10 @@ function adoptConfirmed(chosen, from) {
     wanted[String(at)] = true;
   });
 
-  var review = adoptionReview(from);
+  // The screen says which site the numbers came from, and the sheet
+  // remembers it too. The sheet wins when the screen says nothing, because a
+  // lost source silently turns this into a different job.
+  var review = adoptionReview(from || metaGet('adopt_source') || null);
   var entries = [];
   var skipped = 0;
 
@@ -1727,6 +1740,11 @@ function adoptConfirmed(chosen, from) {
     skipped: skipped,
     refused: review.counts.missing + review.counts.wrongType,
     label: review.label,
+    // What it worked from, so a run that wrote nothing says why rather than
+    // reporting a cheerful zero.
+    source: review.source,
+    sourceLabel: review.sourceLabel,
+    offered: review.rows.length,
     trouble: trouble
   };
 }

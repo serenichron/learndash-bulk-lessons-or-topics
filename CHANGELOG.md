@@ -25,6 +25,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   single press, so the burden sits on ticking rather than unticking.
 
 ### Fixed
+- **Borrowing another site’s ids adopted none of them and said so cheerfully.**
+  The screen showed thirty-one, all matching, all ticked. Pressing the button
+  wrote nothing and reported nothing left over, which reads as success until
+  you notice the number is zero. Which site the numbers came from was sent out
+  to the screen and back, and when it did not survive the trip the second pass
+  fell back to reading the id cells. On a tab showing CREATE there is nothing
+  there, so it found nothing, wrote nothing, and skipped nothing. All true,
+  and about a different job than the one asked for.
+
+  The sheet now writes down where the numbers came from when the screen opens,
+  and that is what the button reads. A run that adopts nothing and refuses
+  nothing also says, in as many words, that it had nothing to work from.
 - **The menu never changed in a spreadsheet that already ran another script.**
   Apps Script loads every file in a project into one namespace, so two files
   each holding a full copy of the shim do not both run. The one that loads

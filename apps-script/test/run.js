@@ -914,5 +914,115 @@ section('onOpen is a wrapper, so a project with its own can still call ours');
 }
 
 // -------------------------------------------------------------------------
+section('A lost source does not quietly turn into a different job');
+{
+  const HEAD = ['quiz_id', 'question_id', 'quiz_post_title', 'question_post_title', 'question_type'];
+  const { upload } = freshBook([
+    HEAD,
+    ['CREATE', 'CREATE', 'Mock 1', 'Build a Sentence 1', 'single'],
+    ['CREATE', 'CREATE', 'Mock 2', 'Build a Sentence 2', 'single'],
+  ]);
+
+  const sheet = readSheet();
+
+  recordIds(
+    resolveRows(sheet, readLedger(), 'live'),
+    { url: 'https://live.example.com', rows: { '2': { quiz: 700, question: 701 }, '3': { quiz: 702, question: 703 } } },
+    { profile: 'live', url: 'https://live.example.com' }
+  );
+
+  H.props.profile = 'qa';
+  H.props.qa_url = 'https://qa.example.com';
+  H.props.qa_key = 'ldbc_test';
+  setView('qa');
+
+  ok('the cells say CREATE on qa', cell(upload, 2, 'quiz_id') === 'CREATE');
+
+  const clone = () => ({ code: 200, body: JSON.stringify({ ok: true, url: 'https://qa.example.com', posts: [
+    { id: 700, found: true, post_type: 'sfwd-quiz', title: 'Mock 1', status: 'publish' },
+    { id: 701, found: true, post_type: 'sfwd-question', title: 'Build a Sentence 1', status: 'publish' },
+    { id: 702, found: true, post_type: 'sfwd-quiz', title: 'Mock 2', status: 'publish' },
+    { id: 703, found: true, post_type: 'sfwd-question', title: 'Build a Sentence 2', status: 'publish' },
+  ] }) });
+
+  // Open the screen the way the menu does.
+  H.fetchReplies.push(clone());
+  openAdoption('live');
+
+  ok('the sheet remembered where the numbers came from', metaGet('adopt_source') === 'live', metaGet('adopt_source'));
+
+  // Now confirm with the source missing, which is what the browser did.
+  H.fetchReplies.push(clone());
+  H.fetchReplies.push(clone());
+  const again = adoptionReview('live');
+  const done = adoptConfirmed(again.rows.filter(r => r.ticked).map(r => r.at), undefined);
+
+  ok('it still adopted them', done.adopted === 4, done);
+  ok('and knew which site they came from', done.source === 'live', done.source);
+
+  const ledger = readLedger();
+  const rows = readSheet().rows;
+  ok('qa holds the borrowed ids', (ledger.get(rows[0].key, 'quiz', 'qa') || {}).id === 700);
+}
+
+// -------------------------------------------------------------------------
+section('The remembered source is cleared by a paste-in adoption');
+{
+  const HEAD = ['quiz_id', 'quiz_post_title'];
+  const { upload } = freshBook([HEAD, ['CREATE', 'Mock 1']]);
+
+  const sheet = readSheet();
+  recordIds(
+    resolveRows(sheet, readLedger(), 'live'),
+    { url: 'https://live.example.com', rows: { '2': { quiz: 700 } } },
+    { profile: 'live', url: 'https://live.example.com' }
+  );
+
+  H.props.profile = 'qa';
+  H.props.qa_url = 'https://qa.example.com';
+  H.props.qa_key = 'ldbc_test';
+  setView('qa');
+
+  H.fetchReplies.push({ code: 200, body: JSON.stringify({ ok: true, url: 'https://qa.example.com', posts: [
+    { id: 700, found: true, post_type: 'sfwd-quiz', title: 'Mock 1', status: 'publish' },
+  ] }) });
+  openAdoption('live');
+  ok('borrowing stores the source', metaGet('adopt_source') === 'live');
+
+  // Now a paste-in run on the same tab.
+  upload.getRange(2, col(upload, 'quiz_id') + 1).setValue(900);
+  H.fetchReplies.push({ code: 200, body: JSON.stringify({ ok: true, url: 'https://qa.example.com', posts: [
+    { id: 900, found: true, post_type: 'sfwd-quiz', title: 'Mock 1', status: 'publish' },
+  ] }) });
+  openAdoption(null);
+
+  ok('a paste-in run clears it', metaGet('adopt_source') === '', metaGet('adopt_source'));
+
+  H.fetchReplies.push({ code: 200, body: JSON.stringify({ ok: true, url: 'https://qa.example.com', posts: [
+    { id: 900, found: true, post_type: 'sfwd-quiz', title: 'Mock 1', status: 'publish' },
+  ] }) });
+  const pasted = adoptionReview(null);
+  ok('so the cells are what gets read', pasted.rows.length === 1 && pasted.rows[0].id === 900, pasted.rows);
+}
+
+// -------------------------------------------------------------------------
+section('No dialog builds a quoted string inside its own script block');
+{
+  // A template that writes the quotes itself puts the escaping in charge of
+  // whether the line is valid JavaScript. Interpolate the bare value between
+  // quotes that are already there, and escaping can only change the value.
+  ['Adopt.html', 'Viewer.html', 'Setup.html', 'Results.html'].forEach(name => {
+    const html = fs.readFileSync(path.join(DIR, name), 'utf8');
+
+    html.split('<script').slice(1).forEach(block => {
+      const script = block.split('</script>')[0];
+      const building = [...script.matchAll(/<\?=[^?]*['"][^?]*\?>/g)].map(m => m[0]);
+
+      ok(name + ' interpolates no quotes into its script', building.length === 0, building);
+    });
+  });
+}
+
+// -------------------------------------------------------------------------
 console.log('\n' + (failures ? failures + ' FAILURES' : 'all green'));
 process.exit(failures ? 1 : 0);

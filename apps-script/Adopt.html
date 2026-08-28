@@ -226,7 +226,10 @@
 
     <script>
       var refused = <?= refused ?>;
-      var source = <?= review.source ? "'" + review.source + "'" : 'null' ?>;
+      // The quotes are written here rather than built in the template, so
+      // what gets interpolated is a bare word like "live" and nothing about
+      // how it is escaped can change what this line means.
+      var source = '<?= review.source ? review.source : "" ?>' || null;
 
       function picked() {
         return Array.prototype.filter
@@ -279,12 +282,25 @@
 
         var left = done.skipped + done.refused;
         var box = document.createElement('div');
-        box.className = 'done' + (left ? ' bad' : '');
 
-        var lines = [
-          '<strong>' + done.adopted + ' ids are now ' + done.label + ' links.</strong>',
-          'A push to ' + done.label + ' will update those posts rather than make new ones.'
-        ];
+        // Nothing written and nothing left over is not success, it is a run
+        // that found nothing to do. It gets said in as many words rather
+        // than reported as a cheerful zero.
+        var nothing = done.adopted === 0 && left === 0;
+        box.className = 'done' + (left || nothing ? ' bad' : '');
+
+        var lines = nothing
+          ? [
+              '<strong>Nothing was adopted, and nothing was refused.</strong>',
+              'There was nothing to work from. ' +
+                (done.source
+                  ? 'This sheet holds no ' + done.sourceLabel + ' ids that ' + done.label + ' does not already have.'
+                  : 'No id cell in this sheet holds a number that is not already a ' + done.label + ' id.')
+            ]
+          : [
+              '<strong>' + done.adopted + ' ids are now ' + done.label + ' links.</strong>',
+              'A push to ' + done.label + ' will update those posts rather than make new ones.'
+            ];
 
         if (left) {
           lines.push(
