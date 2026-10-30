@@ -164,7 +164,10 @@ class Validator {
           $label,
           $level . '_id',
           sprintf(
-            __('PREV, but no earlier row set a %s. It would be skipped without warning.', 'extended-learndash-bulk-create'),
+            __(
+              'PREV, but no earlier row set a %s. It would be skipped without warning.',
+              'extended-learndash-bulk-create',
+            ),
             $level,
           ),
         );
@@ -183,7 +186,10 @@ class Validator {
         $label,
         $level . '_id',
         sprintf(
-          __('"%s" is not something we understand. Use a number, CREATE, PREV, or leave it empty.', 'extended-learndash-bulk-create'),
+          __(
+            '"%s" is not something we understand. Use a number, CREATE, PREV, or leave it empty.',
+            'extended-learndash-bulk-create',
+          ),
           $raw,
         ),
       );
@@ -285,7 +291,10 @@ class Validator {
       $this->problem(
         $label,
         'question_type',
-        __('The advanced quizzes plugin is not active, so question types cannot be checked.', 'extended-learndash-bulk-create'),
+        __(
+          'The advanced quizzes plugin is not active, so question types cannot be checked.',
+          'extended-learndash-bulk-create',
+        ),
       );
       return;
     }

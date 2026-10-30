@@ -213,7 +213,10 @@ class Extended_LearnDash_Bulk_Create {
 
     if ($checkOnly) {
       $this->notices[] = sprintf(
-        __('Checked %1$d rows and found no problems. This would make %2$s, and update %3$s.', 'extended-learndash-bulk-create'),
+        __(
+          'Checked %1$d rows and found no problems. This would make %2$s, and update %3$s.',
+          'extended-learndash-bulk-create',
+        ),
         $summary['rows'],
         $this->count_list($summary, 'new'),
         $this->count_list($summary, 'existing'),
@@ -222,7 +225,10 @@ class Extended_LearnDash_Bulk_Create {
     }
 
     $this->notices[] = sprintf(
-      __('Done. %1$d rows processed. Made %2$s, updated %3$s, took %4$d questions out of their quiz.', 'extended-learndash-bulk-create'),
+      __(
+        'Done. %1$d rows processed. Made %2$s, updated %3$s, took %4$d questions out of their quiz.',
+        'extended-learndash-bulk-create',
+      ),
       $summary['rows'],
       $this->count_list($summary, 'new'),
       $this->count_list($summary, 'existing'),
@@ -336,7 +342,6 @@ function extended_learndash_bulk_create_activate() {
       ['back_link' => true],
     );
   }
-
 }
 register_activation_hook(__FILE__, 'extended_learndash_bulk_create_activate');
 

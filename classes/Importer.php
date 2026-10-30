@@ -62,8 +62,15 @@ class Importer {
       foreach ($rows as $label => $row) {
         $data = new Data($row, $label, $context);
         $posts = new Posts();
-        $posts->createOrUpdate($data, $oldPosts);
-        $posts->updateMeta($data);
+        try {
+          $posts->createOrUpdate($data, $oldPosts);
+          $posts->updateMeta($data);
+        } finally {
+          // Even after a failed row: the hash has to describe whatever the
+          // question holds now. A question that failed before it was set on
+          // $posts is committed by advance quizzes on shutdown instead.
+          $posts->question?->commitVersion();
+        }
         $oldPosts = $posts;
 
         $report['rows'][$label] = $data->resolvedIds();

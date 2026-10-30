@@ -186,7 +186,9 @@ $types = ['quiz'];
         'If you lose it, cancel the key and make another. Nothing breaks.',
         'extended-learndash-bulk-create',
       ); ?></p>
-      <input type="text" readonly value="<?= esc_attr($newKey) ?>" style="width: 100%; padding: 8px; font-family: monospace; font-size: 14px;" onclick="this.select()" autofocus>
+      <input type="text" readonly value="<?= esc_attr(
+        $newKey,
+      ) ?>" style="width: 100%; padding: 8px; font-family: monospace; font-size: 14px;" onclick="this.select()" autofocus>
     </div>
     <script>
       // The page is opened at #keys, so put the key itself in front of the
@@ -246,5 +248,7 @@ $types = ['quiz'];
   </form>
 
   <h3><?php _e('Address for the spreadsheet', 'extended-learndash-bulk-create'); ?></h3>
-  <p><input type="text" readonly value="<?= esc_attr(rest_url(\TSTPrep\LDImporter\Api::NS)) ?>" style="width: 100%; max-width: 40em; font-family: monospace;" onclick="this.select()"></p>
+  <p><input type="text" readonly value="<?= esc_attr(
+    rest_url(\TSTPrep\LDImporter\Api::NS),
+  ) ?>" style="width: 100%; max-width: 40em; font-family: monospace;" onclick="this.select()"></p>
 </div>

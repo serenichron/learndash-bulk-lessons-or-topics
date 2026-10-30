@@ -6,6 +6,8 @@ use Exception;
 use TSTPrep\LDAdvancedQuizzes\CarbonFields\QuestionAffix;
 use TSTPrep\LDAdvancedQuizzes\Questions;
 use TSTPrep\LDAdvancedQuizzes\RegisteredQuestion;
+use TSTPrep\LDAdvancedQuizzes\Versioning\PendingVersion;
+use TSTPrep\LDAdvancedQuizzes\Versioning\QuestionVersioning;
 use TSTPrep\LDImporter\Data;
 use TSTPrep\LDImporter\Post\Post;
 use TSTPrep\LDImporter\Post\Posts;
@@ -33,6 +35,13 @@ class Question extends Post {
    * so anything imported faster than a second a row came out shuffled.
    */
   protected int $position = 0;
+
+  /**
+   * The question's content as it was before this row wrote to it. Advance
+   * quizzes keeps it once the row is done, so submissions answered against it
+   * can still be shown with it. Null when advance quizzes has no versioning.
+   */
+  protected ?PendingVersion $version = null;
 
   /**
    * menu_order rides along with the title and content rather than getting a
@@ -72,6 +81,9 @@ class Question extends Post {
 
   public function create(Posts $posts) {
     parent::create($posts);
+    // Advance quizzes picked the new post up on insert; this hands back that
+    // object, which sets the first hash on commit.
+    $this->captureVersion();
 
     $this->quizQuestionId = $this->savePro($posts, 0);
     update_post_meta($this->id, 'question_pro_id', $this->quizQuestionId);
@@ -79,6 +91,8 @@ class Question extends Post {
   }
 
   public function update(Posts $posts) {
+    // Before the first write, while the content is still the old one.
+    $this->captureVersion();
     parent::update($posts);
 
     $proId = intval(get_post_meta($this->id, 'question_pro_id', true));
@@ -195,5 +209,20 @@ class Question extends Post {
 
   public function getProId(): int {
     return $this->quizQuestionId;
+  }
+
+  protected function captureVersion(): void {
+    if (class_exists(QuestionVersioning::class)) {
+      $this->version = QuestionVersioning::capture($this->id);
+    }
+  }
+
+  /**
+   * Call once every write of the row is done: the post, the pro question and
+   * the meta. Stores the outgoing version if the content changed, and points the
+   * question's hash at what it holds now. Calling it again does nothing.
+   */
+  public function commitVersion(): void {
+    $this->version?->commit();
   }
 }
